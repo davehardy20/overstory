@@ -24,14 +24,12 @@ import type {
 	IPlatformHooks,
 	IPlatformMetrics,
 	IPlatformSpawner,
-	ParsedTranscript,
 	PlatformId,
 	SpawnConfig,
 	SpawnResult,
-	TranscriptDiscovery,
 } from "../interface.ts";
-import { getDefaultConfigDir, getDefaultSessionDir } from "../utils.ts";
-import { createOpencodeMetrics, OpencodeMetrics } from "./metrics.ts";
+import { getDefaultConfigDir } from "../utils.ts";
+import { createOpencodeMetrics } from "./metrics.ts";
 
 // === Hooks Implementation ===
 

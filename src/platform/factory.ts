@@ -155,8 +155,9 @@ export async function createPlatform(platformType: AutoPlatformType): Promise<IP
 	// Resolve 'auto' to actual platform type
 	const resolvedType = platformType === "auto" ? await detectBestPlatform() : platformType;
 
-	// Verify platform is available
-	if (!isPlatformAvailable(resolvedType)) {
+	// Verify platform is available (skip in tests with OVERSTORY_SKIP_PLATFORM_CHECK)
+	const skipCheck = process.env.OVERSTORY_SKIP_PLATFORM_CHECK === "true";
+	if (!skipCheck && !isPlatformAvailable(resolvedType)) {
 		throw new Error(
 			`Platform '${resolvedType}' is not available. Install the ${resolvedType} CLI to use this platform.`,
 		);

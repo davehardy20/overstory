@@ -69,6 +69,10 @@ function getExpectedContextDir(projectRoot: string): string {
 }
 
 beforeEach(async () => {
+	// Skip platform availability check for tests
+	process.env.OVERSTORY_SKIP_PLATFORM_CHECK = "true";
+	process.chdir(originalCwd);
+	tempDir = await realpath(await createTempGitRepo());
 	process.chdir(originalCwd);
 	tempDir = await realpath(await createTempGitRepo());
 

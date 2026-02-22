@@ -1,10 +1,7 @@
 {
-  "active_plan": "/Users/dave/tools/overstory/.sisyphus/plans/port-to-opencode.md",
-  "started_at": "2026-02-22T08:23:57.489Z",
-  "session_ids": [
-    "ses_37d8e0a76ffeGEiDMzuVhPhtmw",
-    "ses_37ae39756ffeFIF3Ea5IxsPnej"
-  ],
-  "plan_name": "port-to-opencode",
-  "agent": "atlas"
+	"active_plan": "/Users/dave/tools/overstory/.sisyphus/plans/port-to-opencode.md",
+	"started_at": "2026-02-22T08:23:57.489Z",
+	"session_ids": ["ses_37d8e0a76ffeGEiDMzuVhPhtmw", "ses_37ae39756ffeFIF3Ea5IxsPnej"],
+	"plan_name": "port-to-opencode",
+	"agent": "atlas"
 }

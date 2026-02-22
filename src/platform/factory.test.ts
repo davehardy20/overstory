@@ -8,7 +8,7 @@ import {
 	getPlatformSummary,
 	isPlatformTypeAvailable,
 } from "./factory.ts";
-import type { PlatformDetectionResult, PlatformType } from "./types.ts";
+import type { PlatformType } from "./types.ts";
 
 // Mock the utils module
 const mockFindPlatformBinary = mock<(platform: PlatformType) => string | null>();
@@ -142,10 +142,10 @@ describe("factory", () => {
 			await expect(createPlatform("auto")).rejects.toThrow("No platform available");
 		});
 
-		it("should throw error when platform implementation not found", async () => {
-			mockIsPlatformAvailable.mockReturnValue(true);
+		it("should throw error when platform is not available", async () => {
+			mockIsPlatformAvailable.mockReturnValue(false);
 
-			await expect(createPlatform("claude")).rejects.toThrow(/Platform implementation|Cannot find module/);
+			await expect(createPlatform("claude")).rejects.toThrow(/Platform 'claude' is not available/);
 		});
 	});
 
@@ -218,7 +218,7 @@ describe("factory integration", () => {
 		// It should either return a platform or throw the expected error
 		try {
 			// Re-import to get fresh module state
-			const { detectBestPlatform: realDetect } = await import("./factory.ts?" + Date.now());
+			const { detectBestPlatform: realDetect } = await import(`./factory.ts?${Date.now()}`);
 			const best = await realDetect();
 			expect(["claude", "opencode"]).toContain(best);
 		} catch (error) {

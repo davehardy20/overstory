@@ -245,7 +245,7 @@ describe("OpencodeMetrics", () => {
 		test("pricing includes required fields", () => {
 			const metrics = new OpencodeMetrics();
 			const pricing = metrics.getModelPricing();
-			for (const [model, modelPricing] of pricing) {
+			for (const [_model, modelPricing] of pricing) {
 				expect(typeof modelPricing.inputPerMillion).toBe("number");
 				expect(typeof modelPricing.outputPerMillion).toBe("number");
 				if (modelPricing.cacheReadPerMillion !== undefined) {

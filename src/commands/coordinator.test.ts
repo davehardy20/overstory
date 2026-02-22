@@ -15,11 +15,11 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir, realpath } from "node:fs/promises";
 import { join } from "node:path";
 import { AgentError, ValidationError } from "../errors.ts";
+import type { SpawnConfig } from "../platform/interface.ts";
 import { openSessionStore } from "../sessions/compat.ts";
 import { createRunStore } from "../sessions/store.ts";
 import { cleanupTempDir, createTempGitRepo } from "../test-helpers.ts";
 import type { AgentSession } from "../types.ts";
-import type { SpawnConfig } from "../platform/interface.ts";
 import {
 	buildCoordinatorBeacon,
 	type CoordinatorDeps,

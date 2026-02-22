@@ -24,12 +24,7 @@ import { createPlatform } from "../platform/factory.ts";
 import type { SpawnConfig } from "../platform/interface.ts";
 import { openSessionStore } from "../sessions/compat.ts";
 import type { AgentSession } from "../types.ts";
-import {
-	isSessionAlive,
-	killSession,
-	sendKeys,
-	waitForTuiReady,
-} from "../worktree/tmux.ts";
+import { isSessionAlive, killSession, sendKeys, waitForTuiReady } from "../worktree/tmux.ts";
 import { isRunningAsRoot } from "./sling.ts";
 
 /**
@@ -206,7 +201,7 @@ async function startSupervisor(args: string[]): Promise<void> {
 			join(projectRoot, config.agents.baseDir),
 		);
 		const manifest = await manifestLoader.load();
-		const { model, env } = resolveModel(config, manifest, "supervisor", "opus");
+		const { env } = resolveModel(config, manifest, "supervisor", "opus");
 
 		// Build spawn config and use platform spawner
 		const spawnConfig: SpawnConfig = {

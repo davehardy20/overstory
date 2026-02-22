@@ -571,7 +571,12 @@ export function createMergeResolver(options: {
 			// Tier 3: AI-resolve
 			if (options.aiResolveEnabled && !history.skipTiers.includes("ai-resolve")) {
 				lastTier = "ai-resolve";
-				const aiResult = await tryAiResolve(conflictFiles, repoRoot, options.platformAI, history.pastResolutions);
+				const aiResult = await tryAiResolve(
+					conflictFiles,
+					repoRoot,
+					options.platformAI,
+					history.pastResolutions,
+				);
 				if (aiResult.success) {
 					if (options.mulchClient) {
 						recordConflictPattern(options.mulchClient, entry, "ai-resolve", conflictFiles, true);
@@ -590,7 +595,12 @@ export function createMergeResolver(options: {
 			// Tier 4: Re-imagine
 			if (options.reimagineEnabled && !history.skipTiers.includes("reimagine")) {
 				lastTier = "reimagine";
-				const reimagineResult = await tryReimagine(entry, canonicalBranch, repoRoot, options.platformAI);
+				const reimagineResult = await tryReimagine(
+					entry,
+					canonicalBranch,
+					repoRoot,
+					options.platformAI,
+				);
 				if (reimagineResult.success) {
 					if (options.mulchClient) {
 						recordConflictPattern(options.mulchClient, entry, "reimagine", conflictFiles, true);

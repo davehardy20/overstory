@@ -2,8 +2,6 @@ import { mkdir } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { AgentError } from "../errors.ts";
 import type { OverlayConfig } from "../types.ts";
-import { createPlatform } from "../platform/factory.ts";
-import { loadConfig } from "../config.ts";
 
 /**
  * Resolve the path to the overlay template file.
@@ -98,16 +96,16 @@ function formatQualityGates(config: OverlayConfig): string {
 		"",
 		"Before reporting completion, you MUST pass all quality gates:",
 		"",
-		"1. **Tests:** \`bun test\` — all tests must pass",
-		"2. **Lint:** \`bun run lint\` — zero errors",
-		"3. **Typecheck:** \`bun run typecheck\` — no TypeScript errors",
+		"1. **Tests:** `bun test` — all tests must pass",
+		"2. **Lint:** `bun run lint` — zero errors",
+		"3. **Typecheck:** `bun run typecheck` — no TypeScript errors",
 		`4. **Commit:** all changes committed to your branch (${config.branchName})`,
 		`5. **Record mulch learnings:** \`mulch record <domain> --type <convention|pattern|failure|decision> --description "..." --outcome-status success --outcome-agent ${config.agentName}\` — capture insights from your work`,
 		`6. **Signal completion:** send \`worker_done\` mail to ${config.parentAgent ?? "orchestrator"}: \`overstory mail send --to ${config.parentAgent ?? "orchestrator"} --subject "Worker done: ${config.beadId}" --body "Quality gates passed." --type worker_done --agent ${config.agentName}\``,
 		`7. **Close issue:** \`bd close ${config.beadId} --reason "summary of changes"\``,
 		"",
 		"Do NOT push to the canonical branch. Your work will be merged by the",
-		"orchestrator via \`overstory merge\`.",
+		"orchestrator via `overstory merge`.",
 	].join("\n");
 }
 
@@ -122,8 +120,8 @@ function formatConstraints(config: OverlayConfig): string {
 			"",
 			"- You are **read-only**: do NOT modify, create, or delete any files",
 			"- Do NOT commit, push, or make any git state changes",
-			"- Report completion via \`bd close\` AND \`overstory mail send --type result\`",
-			"- If you encounter a blocking issue, send mail with \`--priority urgent --type error\`",
+			"- Report completion via `bd close` AND `overstory mail send --type result`",
+			"- If you encounter a blocking issue, send mail with `--priority urgent --type error`",
 		].join("\n");
 	}
 
@@ -135,8 +133,8 @@ function formatConstraints(config: OverlayConfig): string {
 		"- Only modify files in your File Scope",
 		`- Commit only to your branch: ${config.branchName}`,
 		"- Never push to the canonical branch",
-		"- Report completion via \`bd close\` AND \`overstory mail send --type result\`",
-		"- If you encounter a blocking issue, send mail with \`--priority urgent --type error\`",
+		"- Report completion via `bd close` AND `overstory mail send --type result`",
+		"- If you encounter a blocking issue, send mail with `--priority urgent --type error`",
 	].join("\n");
 }
 
@@ -151,10 +149,10 @@ function formatCanSpawn(config: OverlayConfig): string {
 	return [
 		"You may spawn sub-workers using `overstory sling`. Example:",
 		"",
-		"\`\`\`bash",
+		"```bash",
 		"overstory sling <task-id> --capability builder --name <worker-name> \\",
 		`  --parent ${config.agentName} --depth ${config.depth + 1}`,
-		"\`\`\`",
+		"```",
 	].join("\n");
 }
 

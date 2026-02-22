@@ -6,14 +6,8 @@
 
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
-import type {
-	HookDefinition,
-	HookEventType,
-	HookMatcher,
-	HooksConfiguration,
-	IPlatformHooks,
-} from "../interface.ts";
-import { expandTilde, getDefaultConfigDir } from "../utils.ts";
+import type { HooksConfiguration, IPlatformHooks } from "../interface.ts";
+import { getDefaultConfigDir } from "../utils.ts";
 
 export class OpencodeHooks implements IPlatformHooks {
 	getConfigPath(): string {

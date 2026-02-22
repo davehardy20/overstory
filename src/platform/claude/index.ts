@@ -11,7 +11,7 @@
  */
 
 import { existsSync, mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import type {
 	IPlatform,
 	IPlatformAI,
@@ -21,12 +21,12 @@ import type {
 	IPlatformSpawner,
 	PlatformId,
 } from "../interface.ts";
-import { getDefaultConfigDir, getHomeDir } from "../utils.ts";
-import { ClaudeAI, createClaudeAI } from "./ai.ts";
-import { ClaudeContext, createClaudeContext } from "./context.ts";
-import { ClaudeHooks, createClaudeHooks } from "./hooks.ts";
-import { ClaudeMetrics, createClaudeMetrics } from "./metrics.ts";
-import { ClaudeSpawner, createClaudeSpawner } from "./spawner.ts";
+import { getDefaultConfigDir } from "../utils.ts";
+import { createClaudeAI } from "./ai.ts";
+import { createClaudeContext } from "./context.ts";
+import { createClaudeHooks } from "./hooks.ts";
+import { createClaudeMetrics } from "./metrics.ts";
+import { createClaudeSpawner } from "./spawner.ts";
 
 /**
  * Claude Code platform implementation.

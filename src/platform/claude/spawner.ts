@@ -41,7 +41,7 @@ export class ClaudeSpawner implements IPlatformSpawner {
 				const pidStr = output.split("\n")[0];
 				if (pidStr !== undefined && pidStr !== "") {
 					pid = parseInt(pidStr, 10);
-					if (isNaN(pid)) {
+					if (Number.isNaN(pid)) {
 						pid = null;
 					}
 				}
@@ -67,7 +67,7 @@ export class ClaudeSpawner implements IPlatformSpawner {
 
 	async terminate(agentName: string, options?: { force?: boolean }): Promise<void> {
 		try {
-			const signal = options?.force ? "-9" : "-15";
+			const _signal = options?.force ? "-9" : "-15";
 			Bun.spawnSync(["tmux", "kill-session", "-t", agentName], {
 				stdout: "pipe",
 				stderr: "pipe",
@@ -101,7 +101,7 @@ export class ClaudeSpawner implements IPlatformSpawner {
 			if (proc.exitCode === 0) {
 				const output = new TextDecoder().decode(proc.stdout).trim();
 				const pid = parseInt(output.split("\n")[0] ?? "", 10);
-				return isNaN(pid) ? null : pid;
+				return Number.isNaN(pid) ? null : pid;
 			}
 		} catch {
 			// PID retrieval failed

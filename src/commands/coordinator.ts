@@ -20,7 +20,7 @@ import { createManifestLoader, resolveModel } from "../agents/manifest.ts";
 import { loadConfig } from "../config.ts";
 import { AgentError, ValidationError } from "../errors.ts";
 import { createPlatform } from "../platform/factory.ts";
-import type { IPlatform, SpawnConfig } from "../platform/interface.ts";
+import type { SpawnConfig } from "../platform/interface.ts";
 import { openSessionStore } from "../sessions/compat.ts";
 import { createRunStore } from "../sessions/store.ts";
 import type { AgentSession } from "../types.ts";
@@ -75,7 +75,9 @@ export interface CoordinatorDeps {
 	};
 	/** Platform spawner for testing. If not provided, uses real platform from config. */
 	_platform?: {
-		spawn: (config: SpawnConfig) => Promise<{ pid: number | null; sessionId: string; metadata: Record<string, unknown> }>;
+		spawn: (
+			config: SpawnConfig,
+		) => Promise<{ pid: number | null; sessionId: string; metadata: Record<string, unknown> }>;
 	};
 }
 

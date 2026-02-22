@@ -11,7 +11,7 @@ import { loadConfig } from "../config.ts";
 import { ValidationError } from "../errors.ts";
 import { color } from "../logging/color.ts";
 import { createMetricsStore } from "../metrics/store.ts";
-import { createPlatform } from "../platform/factory.ts";
+import { type AutoPlatformType, createPlatform } from "../platform/factory.ts";
 import { openSessionStore } from "../sessions/compat.ts";
 import type { SessionMetrics } from "../types.ts";
 
@@ -67,8 +67,8 @@ async function discoverOrchestratorTranscript(
 	projectRoot: string,
 	platformType: string,
 ): Promise<string | null> {
-	const platform = await createPlatform(platformType as any);
-	const discovery = await (platform.metrics as any).discoverOrchestratorTranscript?.(projectRoot);
+	const platform = await createPlatform(platformType as AutoPlatformType);
+	const discovery = await platform.metrics.discoverOrchestratorTranscript?.(projectRoot);
 	return discovery?.path ?? null;
 }
 
@@ -260,7 +260,10 @@ export async function costsCommand(args: string[]): Promise<void> {
 
 	// Handle --self flag (early return for self-scan)
 	if (self) {
-		const transcriptPath = await discoverOrchestratorTranscript(config.project.root, config.platform.type);
+		const transcriptPath = await discoverOrchestratorTranscript(
+			config.project.root,
+			config.platform.type,
+		);
 		if (!transcriptPath) {
 			if (json) {
 				process.stdout.write(

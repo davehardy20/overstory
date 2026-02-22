@@ -30,12 +30,12 @@ import { loadConfig } from "../config.ts";
 import { AgentError, HierarchyError, ValidationError } from "../errors.ts";
 import { inferDomain } from "../insights/analyzer.ts";
 import { createMulchClient } from "../mulch/client.ts";
+import { createPlatform } from "../platform/factory.ts";
 import { openSessionStore } from "../sessions/compat.ts";
 import { createRunStore } from "../sessions/store.ts";
 import type { AgentSession, OverlayConfig } from "../types.ts";
-import { createPlatform } from "../platform/factory.ts";
 import { createWorktree } from "../worktree/manager.ts";
-import { createSession, sendKeys, waitForTuiReady } from "../worktree/tmux.ts";
+import { sendKeys, waitForTuiReady } from "../worktree/tmux.ts";
 
 /**
  * Calculate how many milliseconds to sleep before spawning a new agent,
