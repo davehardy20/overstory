@@ -60,7 +60,12 @@ export async function getCachedTmuxSessions(
 		tmuxCache = { data, timestamp: now };
 		return data;
 	} catch {
-		return tmuxCache?.data ?? [];
+		// On error, return stale cached data if available (don't cache the error)
+		if (tmuxCache) {
+			return tmuxCache.data;
+		}
+		// No cache available - return empty but don't cache it
+		return [];
 	}
 }
 
