@@ -3,14 +3,22 @@
  *
  * Uses real temp directories and real filesystem (no mocks needed).
  * Each test gets an isolated temp directory with minimal .overstory/
- * and .claude/ scaffolding.
+ * and platform-specific scaffolding.
+ *
+ * Tests use platform abstraction helpers to get correct paths for
+ * the configured platform (Claude Code by default).
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir, realpath } from "node:fs/promises";
 import { join } from "node:path";
 import { ValidationError } from "../errors.ts";
-import { cleanupTempDir, createTempGitRepo } from "../test-helpers.ts";
+import {
+	cleanupTempDir,
+	createTempGitRepo,
+	getMockContextDir,
+	getMockHooksConfigPath,
+} from "../test-helpers.ts";
 import { hooksCommand } from "./hooks.ts";
 
 let tempDir: string;
@@ -50,6 +58,16 @@ async function captureStdout(fn: () => Promise<void>): Promise<string> {
 	return chunks.join("");
 }
 
+/** Get the expected hooks config path for the test platform (Claude). */
+function getExpectedHooksPath(projectRoot: string): string {
+	return getMockHooksConfigPath(projectRoot, "claude");
+}
+
+/** Get the expected context directory for the test platform (Claude). */
+function getExpectedContextDir(projectRoot: string): string {
+	return getMockContextDir(projectRoot, "claude");
+}
+
 beforeEach(async () => {
 	process.chdir(originalCwd);
 	tempDir = await realpath(await createTempGitRepo());
@@ -71,13 +89,10 @@ beforeEach(async () => {
 	process.chdir(tempDir);
 });
 
-	afterEach(async () => {
+afterEach(async () => {
 	process.chdir(originalCwd);
 	await cleanupTempDir(tempDir);
 });
-
-
-
 
 describe("hooksCommand help", () => {
 	test("--help outputs help text", async () => {
@@ -99,7 +114,7 @@ describe("hooksCommand help", () => {
 });
 
 describe("hooks install", () => {
-	test("installs hooks from .overstory/hooks.json to .claude/settings.local.json", async () => {
+	test("installs hooks from .overstory/hooks.json to platform settings", async () => {
 		// Write source hooks
 		await Bun.write(
 			join(tempDir, ".overstory", "hooks.json"),
@@ -108,31 +123,29 @@ describe("hooks install", () => {
 
 		await captureStdout(() => hooksCommand(["install"]));
 
-		// Verify target file was created
-		const targetPath = join(tempDir, ".claude", "settings.local.json");
+		// Verify target file was created using platform abstraction
+		const targetPath = getExpectedHooksPath(tempDir);
 		const content = await Bun.file(targetPath).text();
 		const parsed = JSON.parse(content) as Record<string, unknown>;
 		expect(parsed.hooks).toBeDefined();
 		expect(content).toContain("overstory prime");
 	});
 
-	test("preserves existing non-hooks keys in settings.local.json", async () => {
+	test("preserves existing non-hooks keys in platform settings", async () => {
 		await Bun.write(
 			join(tempDir, ".overstory", "hooks.json"),
 			`${JSON.stringify(SAMPLE_HOOKS, null, "\t")}\n`,
 		);
 
-		// Write existing settings.local.json with non-hooks content
-		const claudeDir = join(tempDir, ".claude");
-		await mkdir(claudeDir, { recursive: true });
-		await Bun.write(
-			join(claudeDir, "settings.local.json"),
-			`${JSON.stringify({ env: { SOME_VAR: "1" } }, null, "\t")}\n`,
-		);
+		// Write existing platform settings with non-hooks content
+		const contextDir = getExpectedContextDir(tempDir);
+		await mkdir(contextDir, { recursive: true });
+		const settingsPath = getExpectedHooksPath(tempDir);
+		await Bun.write(settingsPath, `${JSON.stringify({ env: { SOME_VAR: "1" } }, null, "\t")}\n`);
 
 		await captureStdout(() => hooksCommand(["install"]));
 
-		const content = await Bun.file(join(claudeDir, "settings.local.json")).text();
+		const content = await Bun.file(settingsPath).text();
 		const parsed = JSON.parse(content) as Record<string, unknown>;
 		expect(parsed.hooks).toBeDefined();
 		expect(parsed.env).toEqual({ SOME_VAR: "1" });
@@ -144,19 +157,17 @@ describe("hooks install", () => {
 			`${JSON.stringify(SAMPLE_HOOKS, null, "\t")}\n`,
 		);
 
-		const claudeDir = join(tempDir, ".claude");
-		await mkdir(claudeDir, { recursive: true });
-		await Bun.write(
-			join(claudeDir, "settings.local.json"),
-			`${JSON.stringify({ hooks: { old: "hooks" } }, null, "\t")}\n`,
-		);
+		const contextDir = getExpectedContextDir(tempDir);
+		await mkdir(contextDir, { recursive: true });
+		const settingsPath = getExpectedHooksPath(tempDir);
+		await Bun.write(settingsPath, `${JSON.stringify({ hooks: { old: "hooks" } }, null, "\t")}\n`);
 
 		const output = await captureStdout(() => hooksCommand(["install"]));
 		expect(output).toContain("already present");
 		expect(output).toContain("--force");
 
 		// Verify hooks were NOT overwritten
-		const content = await Bun.file(join(claudeDir, "settings.local.json")).text();
+		const content = await Bun.file(settingsPath).text();
 		expect(content).toContain("old");
 	});
 
@@ -166,16 +177,14 @@ describe("hooks install", () => {
 			`${JSON.stringify(SAMPLE_HOOKS, null, "\t")}\n`,
 		);
 
-		const claudeDir = join(tempDir, ".claude");
-		await mkdir(claudeDir, { recursive: true });
-		await Bun.write(
-			join(claudeDir, "settings.local.json"),
-			`${JSON.stringify({ hooks: { old: "hooks" } }, null, "\t")}\n`,
-		);
+		const contextDir = getExpectedContextDir(tempDir);
+		await mkdir(contextDir, { recursive: true });
+		const settingsPath = getExpectedHooksPath(tempDir);
+		await Bun.write(settingsPath, `${JSON.stringify({ hooks: { old: "hooks" } }, null, "\t")}\n`);
 
 		await captureStdout(() => hooksCommand(["install", "--force"]));
 
-		const content = await Bun.file(join(claudeDir, "settings.local.json")).text();
+		const content = await Bun.file(settingsPath).text();
 		expect(content).not.toContain("old");
 		expect(content).toContain("overstory prime");
 	});
@@ -192,56 +201,54 @@ describe("hooks install", () => {
 
 		await captureStdout(() => hooksCommand(["install"]));
 
-		const content = await Bun.file(join(tempDir, ".claude", "settings.local.json")).text();
+		const settingsPath = getExpectedHooksPath(tempDir);
+		const content = await Bun.file(settingsPath).text();
 		expect(content.endsWith("\n")).toBe(true);
 	});
 });
 
 describe("hooks uninstall", () => {
-	test("removes hooks-only settings.local.json file entirely", async () => {
-		const claudeDir = join(tempDir, ".claude");
-		await mkdir(claudeDir, { recursive: true });
-		await Bun.write(
-			join(claudeDir, "settings.local.json"),
-			`${JSON.stringify({ hooks: { some: "hooks" } }, null, "\t")}\n`,
-		);
+	test("removes hooks-only settings file entirely", async () => {
+		const contextDir = getExpectedContextDir(tempDir);
+		await mkdir(contextDir, { recursive: true });
+		const settingsPath = getExpectedHooksPath(tempDir);
+		await Bun.write(settingsPath, `${JSON.stringify({ hooks: { some: "hooks" } }, null, "\t")}\n`);
 
 		const output = await captureStdout(() => hooksCommand(["uninstall"]));
 		expect(output).toContain("Removed");
 
-		const exists = await Bun.file(join(claudeDir, "settings.local.json")).exists();
+		const exists = await Bun.file(settingsPath).exists();
 		expect(exists).toBe(false);
 	});
 
 	test("preserves non-hooks keys when uninstalling", async () => {
-		const claudeDir = join(tempDir, ".claude");
-		await mkdir(claudeDir, { recursive: true });
+		const contextDir = getExpectedContextDir(tempDir);
+		await mkdir(contextDir, { recursive: true });
+		const settingsPath = getExpectedHooksPath(tempDir);
 		await Bun.write(
-			join(claudeDir, "settings.local.json"),
+			settingsPath,
 			`${JSON.stringify({ hooks: { some: "hooks" }, env: { KEY: "val" } }, null, "\t")}\n`,
 		);
 
 		const output = await captureStdout(() => hooksCommand(["uninstall"]));
 		expect(output).toContain("preserved other settings");
 
-		const content = await Bun.file(join(claudeDir, "settings.local.json")).text();
+		const content = await Bun.file(settingsPath).text();
 		const parsed = JSON.parse(content) as Record<string, unknown>;
 		expect(parsed.hooks).toBeUndefined();
 		expect(parsed.env).toEqual({ KEY: "val" });
 	});
 
-	test("handles missing settings.local.json gracefully", async () => {
+	test("handles missing settings file gracefully", async () => {
 		const output = await captureStdout(() => hooksCommand(["uninstall"]));
 		expect(output).toContain("nothing to uninstall");
 	});
 
-	test("handles settings.local.json with no hooks key", async () => {
-		const claudeDir = join(tempDir, ".claude");
-		await mkdir(claudeDir, { recursive: true });
-		await Bun.write(
-			join(claudeDir, "settings.local.json"),
-			`${JSON.stringify({ env: { KEY: "val" } }, null, "\t")}\n`,
-		);
+	test("handles settings file with no hooks key", async () => {
+		const contextDir = getExpectedContextDir(tempDir);
+		await mkdir(contextDir, { recursive: true });
+		const settingsPath = getExpectedHooksPath(tempDir);
+		await Bun.write(settingsPath, `${JSON.stringify({ env: { KEY: "val" } }, null, "\t")}\n`);
 
 		const output = await captureStdout(() => hooksCommand(["uninstall"]));
 		expect(output).toContain("No hooks found");
@@ -254,7 +261,7 @@ describe("hooks status", () => {
 		expect(output).toContain("missing");
 	});
 
-	test("reports installed:false when no hooks in .claude/", async () => {
+	test("reports installed:false when no hooks in platform context dir", async () => {
 		await Bun.write(
 			join(tempDir, ".overstory", "hooks.json"),
 			`${JSON.stringify(SAMPLE_HOOKS, null, "\t")}\n`,
@@ -266,18 +273,16 @@ describe("hooks status", () => {
 		expect(output).toContain("overstory hooks install");
 	});
 
-	test("reports installed:true when hooks present in .claude/", async () => {
+	test("reports installed:true when hooks present in platform context dir", async () => {
 		await Bun.write(
 			join(tempDir, ".overstory", "hooks.json"),
 			`${JSON.stringify(SAMPLE_HOOKS, null, "\t")}\n`,
 		);
 
-		const claudeDir = join(tempDir, ".claude");
-		await mkdir(claudeDir, { recursive: true });
-		await Bun.write(
-			join(claudeDir, "settings.local.json"),
-			`${JSON.stringify({ hooks: {} }, null, "\t")}\n`,
-		);
+		const contextDir = getExpectedContextDir(tempDir);
+		await mkdir(contextDir, { recursive: true });
+		const settingsPath = getExpectedHooksPath(tempDir);
+		await Bun.write(settingsPath, `${JSON.stringify({ hooks: {} }, null, "\t")}\n`);
 
 		const output = await captureStdout(() => hooksCommand(["status"]));
 		expect(output).toContain("yes");

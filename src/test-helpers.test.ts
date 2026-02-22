@@ -2,7 +2,18 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { cleanupTempDir, commitFile, createTempGitRepo } from "./test-helpers.ts";
+import {
+	cleanupTempDir,
+	commitFile,
+	createMockClaudePlatform,
+	createMockOpencodePlatform,
+	createMockPlatform,
+	createTempGitRepo,
+	MOCK_CLAUDE_CONFIG,
+	MOCK_CONTEXT_CONTENT,
+	MOCK_OPENCODE_CONFIG,
+	MOCK_SPAWN_RESULT,
+} from "./test-helpers.ts";
 
 describe("createTempGitRepo", () => {
 	let repoDir: string | undefined;
@@ -120,5 +131,131 @@ describe("cleanupTempDir", () => {
 	test("does not throw when directory does not exist", async () => {
 		await cleanupTempDir("/tmp/overstory-nonexistent-test-dir-12345");
 		// No error thrown = pass
+	});
+});
+
+describe("createMockPlatform", () => {
+	test("creates Claude platform with correct id", () => {
+		const platform = createMockPlatform("claude");
+		expect(platform.id).toBe("claude-code");
+		expect(platform.displayName).toBe("Mock Claude Code");
+	});
+
+	test("creates Opencode platform with correct id", () => {
+		const platform = createMockPlatform("opencode");
+		expect(platform.id).toBe("opencode");
+		expect(platform.displayName).toBe("Mock Opencode");
+	});
+
+	test("Claude platform has correct context dir", () => {
+		const platform = createMockPlatform("claude");
+		expect(platform.getContextDir("/project")).toBe("/project/.claude");
+	});
+
+	test("Opencode platform has correct context dir", () => {
+		const platform = createMockPlatform("opencode");
+		expect(platform.getContextDir("/project")).toBe("/project");
+	});
+
+	test("platform isAvailable returns true", async () => {
+		const platform = createMockPlatform("claude");
+		expect(await platform.isAvailable()).toBe(true);
+	});
+
+	test("platform validate does not throw", async () => {
+		const platform = createMockPlatform("claude");
+		await expect(platform.validate()).resolves.toBeUndefined();
+	});
+});
+
+describe("createMockClaudePlatform", () => {
+	test("returns Claude platform", () => {
+		const platform = createMockClaudePlatform();
+		expect(platform.id).toBe("claude-code");
+	});
+
+	test("hooks interface works", async () => {
+		const platform = createMockClaudePlatform();
+		expect(platform.hooks.getConfigPath()).toContain("mock-claude-config");
+		expect(await platform.hooks.isInstalled()).toBe(false);
+	});
+
+	test("context interface works", async () => {
+		const platform = createMockClaudePlatform();
+		expect(platform.context.getContextFileName()).toBe("CLAUDE.md");
+		const content = await platform.context.read("/any/path");
+		expect(content).toBe(MOCK_CONTEXT_CONTENT);
+	});
+
+	test("spawner interface works", async () => {
+		const platform = createMockClaudePlatform();
+		const result = await platform.spawner.spawn({
+			agentName: "test-agent",
+			capability: "builder",
+			worktreePath: "/tmp/test",
+			branchName: "test-branch",
+			beadId: "test-123",
+			parentAgent: null,
+			depth: 0,
+		});
+		expect(result.sessionId).toBe("mock-session-test-agent");
+		expect(result.pid).toBeGreaterThan(10000);
+	});
+
+	test("metrics interface works", async () => {
+		const platform = createMockClaudePlatform();
+		expect(platform.metrics.getTranscriptsDir()).toContain("transcripts");
+		const transcripts = await platform.metrics.discoverTranscripts();
+		expect(transcripts.length).toBe(1);
+	});
+
+	test("AI interface works", async () => {
+		const platform = createMockClaudePlatform();
+		expect(platform.ai).toBeDefined();
+		expect(await platform.ai?.isAvailable()).toBe(true);
+		expect(platform.ai?.getDefaultModel()).toBe("claude-3-sonnet");
+	});
+});
+
+describe("createMockOpencodePlatform", () => {
+	test("returns Opencode platform", () => {
+		const platform = createMockOpencodePlatform();
+		expect(platform.id).toBe("opencode");
+	});
+
+	test("context interface uses AGENTS.md", async () => {
+		const platform = createMockOpencodePlatform();
+		expect(platform.context.getContextFileName()).toBe("AGENTS.md");
+	});
+
+	test("context dir is project root for opencode", () => {
+		const platform = createMockOpencodePlatform();
+		expect(platform.getContextDir("/my-project")).toBe("/my-project");
+	});
+});
+
+describe("Mock test fixtures", () => {
+	test("MOCK_CLAUDE_CONFIG has correct structure", () => {
+		expect(MOCK_CLAUDE_CONFIG.type).toBe("claude");
+		expect(MOCK_CLAUDE_CONFIG.name).toBe("Mock Claude Code");
+		expect(MOCK_CLAUDE_CONFIG.configDir).toContain("mock-claude");
+	});
+
+	test("MOCK_OPENCODE_CONFIG has correct structure", () => {
+		expect(MOCK_OPENCODE_CONFIG.type).toBe("opencode");
+		expect(MOCK_OPENCODE_CONFIG.name).toBe("Mock Opencode");
+		expect(MOCK_OPENCODE_CONFIG.configDir).toContain("mock-opencode");
+	});
+
+	test("MOCK_SPAWN_RESULT has required fields", () => {
+		expect(MOCK_SPAWN_RESULT.pid).toBe(12345);
+		expect(MOCK_SPAWN_RESULT.sessionId).toBe("mock-session-123");
+		expect(MOCK_SPAWN_RESULT.metadata).toHaveProperty("tmuxSession");
+	});
+
+	test("MOCK_CONTEXT_CONTENT contains expected sections", () => {
+		expect(MOCK_CONTEXT_CONTENT).toContain("Mock Agent Context");
+		expect(MOCK_CONTEXT_CONTENT).toContain("## Instructions");
+		expect(MOCK_CONTEXT_CONTENT).toContain("## Tools");
 	});
 });

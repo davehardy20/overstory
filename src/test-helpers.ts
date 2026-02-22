@@ -124,3 +124,436 @@ export async function runGitInDir(cwd: string, args: string[]): Promise<string> 
 
 	return stdout;
 }
+
+import type {
+	AICallConfig,
+	AICallResult,
+	HooksConfiguration,
+	IPlatform,
+	IPlatformAI,
+	IPlatformContext,
+	IPlatformHooks,
+	IPlatformMetrics,
+	IPlatformSpawner,
+	ParsedTranscript,
+	SpawnConfig,
+	SpawnResult,
+	TranscriptDiscovery,
+} from "./platform/interface.ts";
+import type { PlatformType } from "./platform/types.ts";
+import type { OverlayConfig } from "./types.ts";
+
+// =============================================================================
+// Test Fixtures
+// =============================================================================
+
+/**
+ * Mock platform configuration for Claude Code.
+ */
+export const MOCK_CLAUDE_CONFIG = {
+	type: "claude" as const,
+	name: "Mock Claude Code",
+	configDir: "/tmp/mock-claude-config",
+	sessionDir: "/tmp/mock-claude-sessions",
+};
+
+/**
+ * Mock platform configuration for Opencode.
+ */
+export const MOCK_OPENCODE_CONFIG = {
+	type: "opencode" as const,
+	name: "Mock Opencode",
+	configDir: "/tmp/mock-opencode-config",
+	sessionDir: "/tmp/mock-opencode-sessions",
+};
+
+/**
+ * Mock spawn result for testing agent spawning.
+ */
+export const MOCK_SPAWN_RESULT: SpawnResult = {
+	pid: 12345,
+	sessionId: "mock-session-123",
+	spawnedAt: "2024-01-15T10:30:00.000Z",
+	metadata: {
+		tmuxSession: "mock-session-123",
+		worktreePath: "/tmp/mock-worktree",
+	},
+};
+
+/**
+ * Mock context file content for testing.
+ */
+export const MOCK_CONTEXT_CONTENT = `# Mock Agent Context
+
+This is a test context file for unit testing.
+
+## Instructions
+- Test instruction 1
+- Test instruction 2
+
+## Tools
+- Read tool allowed
+- Write tool allowed
+`;
+
+/**
+ * Mock transcript discovery result for testing metrics.
+ */
+export const MOCK_TRANSCRIPT_DISCOVERY: TranscriptDiscovery = {
+	path: "/tmp/mock-transcripts/test-session.jsonl",
+	agentName: "mock-agent",
+	sessionId: "mock-session-123",
+	timestamp: "2024-01-15T10:30:00.000Z",
+	sizeBytes: 1024,
+};
+
+/**
+ * Mock parsed transcript for testing.
+ */
+export const MOCK_PARSED_TRANSCRIPT: ParsedTranscript = {
+	meta: {
+		path: "/tmp/mock-transcripts/test-session.jsonl",
+		agentName: "mock-agent",
+		sessionId: "mock-session-123",
+		timestamp: "2024-01-15T10:30:00.000Z",
+	},
+	tokens: {
+		input: 1000,
+		output: 500,
+		cacheRead: 200,
+		cacheCreation: 100,
+	},
+	estimatedCostUsd: 0.015,
+	modelUsed: "claude-3-sonnet",
+	toolStats: [
+		{ name: "Read", count: 10, totalDurationMs: 500 },
+		{ name: "Write", count: 5, totalDurationMs: 250 },
+	],
+};
+
+/**
+ * Mock AI call result for testing.
+ */
+export const MOCK_AI_CALL_RESULT: AICallResult = {
+	content: "Mock AI response content",
+	modelUsed: "claude-3-sonnet",
+	tokens: {
+		input: 100,
+		output: 50,
+		cacheRead: 0,
+		cacheCreation: 0,
+	},
+	truncated: false,
+	durationMs: 500,
+};
+
+// =============================================================================
+// Mock Sub-Interface Implementations
+// =============================================================================
+
+/**
+ * Create a mock hooks interface for testing.
+ */
+function createMockHooks(configDir: string): IPlatformHooks {
+	return {
+		getConfigPath: () => `${configDir}/hooks.json`,
+		load: async (): Promise<HooksConfiguration> => ({
+			hooks: {
+				SessionStart: [],
+				UserPromptSubmit: [],
+				PreToolUse: [],
+				PostToolUse: [],
+				Stop: [],
+				PreCompact: [],
+			},
+		}),
+		save: async () => {
+			// Mock save - no-op
+		},
+		install: async () => {
+			// Mock install - no-op
+		},
+		uninstall: async () => {
+			// Mock uninstall - no-op
+		},
+		isInstalled: async () => false,
+		formatCommand: (command: string, context: Record<string, string>) => {
+			let result = command;
+			for (const [key, value] of Object.entries(context)) {
+				result = result.replace(`{{${key}}}`, value);
+			}
+			return result;
+		},
+	};
+}
+
+/**
+ * Create a mock context interface for testing.
+ */
+function createMockContext(contextDir: string, contextFileName: string): IPlatformContext {
+	return {
+		getContextDir: () => contextDir,
+		getContextFileName: () => contextFileName,
+		generateContent: async (config: OverlayConfig) => {
+			// Generate mock content based on overlay config
+			return `# Mock Context for ${config.agentName}\n\nCapability: ${config.capability}\n`;
+		},
+		write: async () => {
+			// Mock write - no-op
+		},
+		read: async () => MOCK_CONTEXT_CONTENT,
+		remove: async () => {
+			// Mock remove - no-op
+		},
+	};
+}
+
+/**
+ * Create a mock spawner interface for testing.
+ */
+function createMockSpawner(): IPlatformSpawner {
+	return {
+		spawn: async (config: SpawnConfig): Promise<SpawnResult> => ({
+			pid: 12345 + Math.floor(Math.random() * 1000),
+			sessionId: `mock-session-${config.agentName}`,
+			spawnedAt: new Date().toISOString(),
+			metadata: {
+				tmuxSession: `mock-session-${config.agentName}`,
+				worktreePath: config.worktreePath,
+				branchName: config.branchName,
+			},
+		}),
+		terminate: async () => {
+			// Mock terminate - no-op
+		},
+		isRunning: async () => false,
+		getPid: async () => null,
+		attach: async () => {
+			// Mock attach - no-op
+		},
+		sendInput: async () => {
+			// Mock sendInput - no-op
+		},
+	};
+}
+
+/**
+ * Create a mock metrics interface for testing.
+ */
+function createMockMetrics(transcriptsDir: string): IPlatformMetrics {
+	return {
+		getTranscriptsDir: () => transcriptsDir,
+		discoverTranscripts: async (options?: {
+			agentName?: string;
+			since?: string;
+			limit?: number;
+		}) => {
+			const result = { ...MOCK_TRANSCRIPT_DISCOVERY };
+			if (options?.agentName) {
+				result.agentName = options.agentName;
+			}
+			return [result];
+		},
+		parseTranscript: async () => ({ ...MOCK_PARSED_TRANSCRIPT }),
+		extractTokens: (parsed: ParsedTranscript) => ({ ...parsed.tokens }),
+		calculateCost: (tokens, _model) => {
+			// Simple mock calculation
+			return tokens.input * 0.00001 + tokens.output * 0.00003;
+		},
+		getModelPricing: () => {
+			const pricing = new Map();
+			pricing.set("claude-3-sonnet", { inputPerMillion: 3, outputPerMillion: 15 });
+			pricing.set("claude-3-opus", { inputPerMillion: 15, outputPerMillion: 75 });
+			return pricing;
+		},
+	};
+}
+
+/**
+ * Create a mock AI interface for testing.
+ */
+function createMockAI(): IPlatformAI {
+	return {
+		call: async (config: AICallConfig): Promise<AICallResult> => ({
+			...MOCK_AI_CALL_RESULT,
+			content: `Mock response to: ${config.userPrompt.substring(0, 50)}...`,
+		}),
+		stream: async (_config: AICallConfig, onChunk: (chunk: string) => void) => {
+			// Mock streaming - emit chunks then return full result
+			const chunks = ["Mock ", "stream ", "response"];
+			for (const chunk of chunks) {
+				onChunk(chunk);
+			}
+			return {
+				...MOCK_AI_CALL_RESULT,
+				content: "Mock stream response",
+			};
+		},
+		isAvailable: async () => true,
+		getDefaultModel: () => "claude-3-sonnet",
+		listModels: async () => ["claude-3-sonnet", "claude-3-opus", "claude-3-haiku"],
+	};
+}
+
+// =============================================================================
+// Mock Platform Factory Functions
+// =============================================================================
+
+/**
+ * Create a mock platform implementation for testing.
+ *
+ * @param type - The platform type to mock ('claude' or 'opencode')
+ * @returns A mock IPlatform implementation
+ */
+export function createMockPlatform(type: PlatformType): IPlatform {
+	const config = type === "claude" ? MOCK_CLAUDE_CONFIG : MOCK_OPENCODE_CONFIG;
+	const contextFileName = type === "claude" ? "CLAUDE.md" : "AGENTS.md";
+	const platformId = type === "claude" ? "claude-code" : "opencode";
+	const displayName = type === "claude" ? "Mock Claude Code" : "Mock Opencode";
+
+	const hooks = createMockHooks(config.configDir);
+	const context = createMockContext(config.sessionDir, contextFileName);
+	const spawner = createMockSpawner();
+	const metrics = createMockMetrics(`${config.sessionDir}/transcripts`);
+	const ai = createMockAI();
+
+	return {
+		id: platformId,
+		displayName,
+		version: "1.0.0-mock",
+		hooks,
+		context,
+		spawner,
+		metrics,
+		ai,
+		getConfigDir: () => config.configDir,
+		getContextDir: (projectRoot: string) =>
+			type === "claude" ? `${projectRoot}/.claude` : projectRoot,
+		getHooksConfigPath: () => `${config.configDir}/hooks.json`,
+		isAvailable: async () => true,
+		getPlatformVersion: async () => "1.0.0-mock",
+		validate: async () => {
+			// Mock validation - always passes
+		},
+	};
+}
+
+/**
+ * Create a mock Claude Code platform for testing.
+ *
+ * @returns A mock IPlatform implementation configured as Claude Code
+ */
+export function createMockClaudePlatform(): IPlatform {
+	return createMockPlatform("claude");
+}
+
+/**
+ * Create a mock Opencode platform for testing.
+ *
+ * @returns A mock IPlatform implementation configured as Opencode
+ */
+export function createMockOpencodePlatform(): IPlatform {
+	return createMockPlatform("opencode");
+}
+
+/**
+ * Mock platform helpers for testing.
+ *
+ * These provide platform-like interfaces without requiring the actual
+ * CLI tools to be installed. Used for testing platform-agnostic code.
+ */
+
+// Note: join is already imported at the top of the file
+
+/**
+ * Get the platform-specific context directory for a project root.
+ * For testing purposes, defaults to Claude Code's .claude/ directory.
+ *
+ * @param projectRoot - The project root path
+ * @param platformType - The platform type ("claude" or "opencode")
+ * @returns The context directory path
+ */
+export function getMockContextDir(
+	projectRoot: string,
+	platformType: "claude" | "opencode" = "claude",
+): string {
+	if (platformType === "opencode") {
+		// Opencode uses AGENTS.md in the project root
+		return projectRoot;
+	}
+	// Claude Code uses .claude/ subdirectory
+	return join(projectRoot, ".claude");
+}
+
+/**
+ * Get the platform-specific settings file name.
+ *
+ * @param platformType - The platform type
+ * @returns The settings file name
+ */
+export function getMockSettingsFileName(platformType: "claude" | "opencode" = "claude"): string {
+	// Claude Code uses settings.local.json, Opencode uses settings.json
+	return platformType === "opencode" ? "settings.json" : "settings.local.json";
+}
+
+/**
+ * Get the platform-specific hooks config path.
+ *
+ * @param projectRoot - The project root path
+ * @param platformType - The platform type
+ * @returns The hooks config file path
+ */
+export function getMockHooksConfigPath(
+	projectRoot: string,
+	platformType: "claude" | "opencode" = "claude",
+): string {
+	const contextDir = getMockContextDir(projectRoot, platformType);
+	const settingsFileName = getMockSettingsFileName(platformType);
+	return join(contextDir, settingsFileName);
+}
+
+/**
+ * Get the platform-specific context file name (e.g., CLAUDE.md or AGENTS.md).
+ *
+ * @param platformType - The platform type
+ * @returns The context file name
+ */
+export function getMockContextFileName(platformType: "claude" | "opencode" = "claude"): string {
+	return platformType === "opencode" ? "AGENTS.md" : "CLAUDE.md";
+}
+
+/**
+ * Get the full path to the context file in a worktree.
+ *
+ * @param worktreePath - The worktree path
+ * @param platformType - The platform type
+ * @returns The context file path
+ */
+export function getMockContextFilePath(
+	worktreePath: string,
+	platformType: "claude" | "opencode" = "claude",
+): string {
+	if (platformType === "opencode") {
+		// Opencode uses AGENTS.md in project root
+		return join(worktreePath, "AGENTS.md");
+	}
+	// Claude Code uses .claude/CLAUDE.md
+	return join(worktreePath, ".claude", "CLAUDE.md");
+}
+
+/**
+ * Get the spawn command for a platform.
+ *
+ * @param taskDescription - The task description
+ * @param platformType - The platform type
+ * @returns The spawn command string
+ */
+export function getMockSpawnCommand(
+	taskDescription: string,
+	platformType: "claude" | "opencode" = "claude",
+): string {
+	if (platformType === "opencode") {
+		return `opencode --task '${taskDescription}'`;
+	}
+	return `claude --task '${taskDescription}'`;
+}

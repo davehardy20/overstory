@@ -1376,7 +1376,7 @@ Wave FINAL (Review):
 
 ---
 
-- [ ] 31. Create Platform Test Utilities
+ [x] 31. Create Platform Test Utilities
 
   **What to do**:
   - Create `src/test-helpers.ts` additions for platform testing
@@ -1404,7 +1404,7 @@ Wave FINAL (Review):
   - Message: `test: add platform test utilities`
   - Files: `src/test-helpers.ts`
 
-- [ ] 32. Update Existing Tests for Abstraction
+ [x] 32. Update Existing Tests for Abstraction
 
   **What to do**:
   - Update all existing tests to use platform abstraction
@@ -1443,7 +1443,7 @@ Wave FINAL (Review):
   - Message: `test: update existing tests for platform abstraction`
   - Files: `src/**/*.test.ts`
 
-- [ ] 33. Write Opencode Platform Tests
+ [x] 33. Write Opencode Platform Tests
 
   **What to do**:
   - Create comprehensive tests for Opencode platform
@@ -1472,7 +1472,7 @@ Wave FINAL (Review):
   - Message: `test: add Opencode platform tests`
   - Files: `src/platform/opencode.test.ts`, `src/platform/opencode-*.test.ts`
 
-- [ ] 34. Write Integration Tests
+ [x] 34. Write Integration Tests
 
   **What to do**:
   - Create end-to-end integration tests
