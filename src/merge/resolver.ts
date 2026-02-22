@@ -494,7 +494,7 @@ export function createMergeResolver(options: {
 	aiResolveEnabled: boolean;
 	reimagineEnabled: boolean;
 	mulchClient?: MulchClient;
-	platformAI: IPlatformAI;
+	platformAI?: IPlatformAI;
 }): MergeResolver {
 	return {
 		async resolve(
@@ -570,6 +570,11 @@ export function createMergeResolver(options: {
 
 			// Tier 3: AI-resolve
 			if (options.aiResolveEnabled && !history.skipTiers.includes("ai-resolve")) {
+				if (!options.platformAI) {
+					throw new MergeError("platformAI is required when aiResolveEnabled is true", {
+						branchName: entry.branchName,
+					});
+				}
 				lastTier = "ai-resolve";
 				const aiResult = await tryAiResolve(
 					conflictFiles,
@@ -594,6 +599,11 @@ export function createMergeResolver(options: {
 
 			// Tier 4: Re-imagine
 			if (options.reimagineEnabled && !history.skipTiers.includes("reimagine")) {
+				if (!options.platformAI) {
+					throw new MergeError("platformAI is required when reimagineEnabled is true", {
+						branchName: entry.branchName,
+					});
+				}
 				lastTier = "reimagine";
 				const reimagineResult = await tryReimagine(
 					entry,

@@ -4,7 +4,6 @@ import { AgentError } from "../errors.ts";
 import { loadTemplate, TEMPLATE_FILES } from "../templates.ts";
 import type { OverlayConfig } from "../types.ts";
 
-
 /**
  * Format the file scope list as a markdown bullet list.
  * Returns a human-readable fallback if no files are scoped.
@@ -164,10 +163,10 @@ export async function generateOverlay(config: OverlayConfig): Promise<string> {
 	try {
 		template = await loadTemplate(TEMPLATE_FILES.OVERLAY);
 	} catch (err) {
-		throw new AgentError(
-			`Failed to load overlay template: ${TEMPLATE_FILES.OVERLAY}`,
-			{ agentName: config.agentName, cause: err instanceof Error ? err : undefined },
-		);
+		throw new AgentError(`Failed to load overlay template: ${TEMPLATE_FILES.OVERLAY}`, {
+			agentName: config.agentName,
+			cause: err instanceof Error ? err : undefined,
+		});
 	}
 
 	const specInstruction = config.specPath

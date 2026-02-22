@@ -1,16 +1,8 @@
-import {
-	afterAll,
-	afterEach,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	spyOn,
-	test,
-} from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { MergeError } from "../errors.ts";
 import type { MulchClient } from "../mulch/client.ts";
+import type { IPlatformAI } from "../platform/interface.ts";
 import {
 	cleanupTempDir,
 	commitFile,
@@ -27,26 +19,39 @@ import {
 } from "./resolver.ts";
 
 /**
- * Helper to create a mock Bun.spawn return value for claude CLI mocking.
- *
- * The resolver reads stdout/stderr via `new Response(proc.stdout).text()`
- * and `new Response(proc.stderr).text()`, so we need ReadableStreams.
+ * Helper to create a mock IPlatformAI for testing merge resolution.
+ * Returns predictable content for AI calls.
  */
-function mockSpawnResult(
-	stdout: string,
-	stderr: string,
-	exitCode: number,
-): {
-	stdout: ReadableStream<Uint8Array>;
-	stderr: ReadableStream<Uint8Array>;
-	exited: Promise<number>;
-	pid: number;
-} {
+function createMockPlatformAI(responseContent = "resolved content from AI\n"): IPlatformAI {
 	return {
-		stdout: new Response(stdout).body as ReadableStream<Uint8Array>,
-		stderr: new Response(stderr).body as ReadableStream<Uint8Array>,
-		exited: Promise.resolve(exitCode),
-		pid: 12345,
+		async call(_config) {
+			return {
+				content: responseContent,
+				modelUsed: "test-model",
+				tokens: {
+					input: 100,
+					output: 50,
+					cacheRead: 0,
+					cacheCreation: 0,
+				},
+				truncated: false,
+				durationMs: 1000,
+			};
+		},
+		async stream(config, onChunk) {
+			const result = await this.call(config);
+			onChunk(result.content);
+			return result;
+		},
+		async isAvailable() {
+			return true;
+		},
+		getDefaultModel() {
+			return "test-model";
+		},
+		async listModels() {
+			return ["test-model"];
+		},
 	};
 }
 
@@ -355,43 +360,33 @@ describe("createMergeResolver", () => {
 		});
 
 		// This test runs second -- repo is clean from the abort, same conflict is available
-		test("invokes claude when aiResolveEnabled is true and tier 2 fails", async () => {
-			// Selective spy: mock only claude, let git commands through.
-			const originalSpawn = Bun.spawn;
-			let claudeCalled = false;
-
-			const selectiveMock = (...args: unknown[]): unknown => {
-				const cmd = args[0] as string[];
-				if (cmd?.[0] === "claude") {
-					claudeCalled = true;
-					return mockSpawnResult("resolved content from AI\n", "", 0);
-				}
-				return originalSpawn.apply(Bun, args as Parameters<typeof Bun.spawn>);
+		test("invokes AI when aiResolveEnabled is true and tier 2 fails", async () => {
+			let aiCalled = false;
+			const mockAI = createMockPlatformAI("resolved content from AI\n");
+			const originalCall = mockAI.call.bind(mockAI);
+			mockAI.call = async (config) => {
+				aiCalled = true;
+				return originalCall(config);
 			};
 
-			const spawnSpy = spyOn(Bun, "spawn").mockImplementation(selectiveMock as typeof Bun.spawn);
+			const entry = makeTestEntry({
+				branchName: "feature-branch",
+				filesModified: ["src/test.ts"],
+			});
 
-			try {
-				const entry = makeTestEntry({
-					branchName: "feature-branch",
-					filesModified: ["src/test.ts"],
-				});
+			const resolver = createMergeResolver({
+				aiResolveEnabled: true,
+				reimagineEnabled: false,
+				platformAI: mockAI,
+			});
 
-				const resolver = createMergeResolver({
-					aiResolveEnabled: true,
-					reimagineEnabled: false,
-				});
+			const result = await resolver.resolve(entry, defaultBranch, repoDir);
 
-				const result = await resolver.resolve(entry, defaultBranch, repoDir);
-
-				expect(claudeCalled).toBe(true);
-				expect(result.success).toBe(true);
-				expect(result.tier).toBe("ai-resolve");
-				expect(result.entry.status).toBe("merged");
-				expect(result.entry.resolvedTier).toBe("ai-resolve");
-			} finally {
-				spawnSpy.mockRestore();
-			}
+			expect(aiCalled).toBe(true);
+			expect(result.success).toBe(true);
+			expect(result.tier).toBe("ai-resolve");
+			expect(result.entry.status).toBe("merged");
+			expect(result.entry.resolvedTier).toBe("ai-resolve");
 		});
 	});
 
@@ -431,47 +426,37 @@ describe("createMergeResolver", () => {
 
 		// This test runs second -- repo is clean from the abort, same conflict is available
 		test("aborts merge and reimplements when reimagineEnabled is true", async () => {
-			// Selective spy: mock only claude, let git commands through.
-			const originalSpawn = Bun.spawn;
-			let claudeCalled = false;
-
-			const selectiveMock = (...args: unknown[]): unknown => {
-				const cmd = args[0] as string[];
-				if (cmd?.[0] === "claude") {
-					claudeCalled = true;
-					return mockSpawnResult("reimagined content\n", "", 0);
-				}
-				return originalSpawn.apply(Bun, args as Parameters<typeof Bun.spawn>);
+			let aiCalled = false;
+			const mockAI = createMockPlatformAI("reimagined content\n");
+			const originalCall = mockAI.call.bind(mockAI);
+			mockAI.call = async (config) => {
+				aiCalled = true;
+				return originalCall(config);
 			};
 
-			const spawnSpy = spyOn(Bun, "spawn").mockImplementation(selectiveMock as typeof Bun.spawn);
+			const entry = makeTestEntry({
+				branchName: "feature-branch",
+				filesModified: ["src/reimagine-target.ts"],
+			});
 
-			try {
-				const entry = makeTestEntry({
-					branchName: "feature-branch",
-					filesModified: ["src/reimagine-target.ts"],
-				});
+			const resolver = createMergeResolver({
+				aiResolveEnabled: false,
+				reimagineEnabled: true,
+				platformAI: mockAI,
+			});
 
-				const resolver = createMergeResolver({
-					aiResolveEnabled: false,
-					reimagineEnabled: true,
-				});
+			const result = await resolver.resolve(entry, defaultBranch, repoDir);
 
-				const result = await resolver.resolve(entry, defaultBranch, repoDir);
+			expect(aiCalled).toBe(true);
+			expect(result.success).toBe(true);
+			expect(result.tier).toBe("reimagine");
+			expect(result.entry.status).toBe("merged");
+			expect(result.entry.resolvedTier).toBe("reimagine");
 
-				expect(claudeCalled).toBe(true);
-				expect(result.success).toBe(true);
-				expect(result.tier).toBe("reimagine");
-				expect(result.entry.status).toBe("merged");
-				expect(result.entry.resolvedTier).toBe("reimagine");
-
-				// Verify the reimagined content was written
-				const file = Bun.file(join(repoDir, "src/reimagine-target.ts"));
-				const content = await file.text();
-				expect(content).toBe("reimagined content\n");
-			} finally {
-				spawnSpy.mockRestore();
-			}
+			// Verify the reimagined content was written
+			const file = Bun.file(join(repoDir, "src/reimagine-target.ts"));
+			const content = await file.text();
+			expect(content).toBe("reimagined content\n");
 		});
 	});
 
@@ -669,40 +654,26 @@ describe("createMergeResolver", () => {
 				const defaultBranch = await getDefaultBranch(repoDir);
 				await setupDeleteModifyConflict(repoDir, defaultBranch);
 
-				const originalSpawn = Bun.spawn;
-				const selectiveMock = (...args: unknown[]): unknown => {
-					const cmd = args[0] as string[];
-					if (cmd?.[0] === "claude") {
-						// Return prose instead of code
-						return mockSpawnResult(
-							"I need permission to edit the file. Here's the resolved content:\n```\nresolved\n```",
-							"",
-							0,
-						);
-					}
-					return originalSpawn.apply(Bun, args as Parameters<typeof Bun.spawn>);
-				};
+				// Create mock AI that returns prose instead of code
+				const mockAI = createMockPlatformAI(
+					"I need permission to edit the file. Here's the resolved content:\n```\nresolved\n```",
+				);
 
-				const spawnSpy = spyOn(Bun, "spawn").mockImplementation(selectiveMock as typeof Bun.spawn);
+				const entry = makeTestEntry({
+					branchName: "feature-branch",
+					filesModified: ["src/test.ts"],
+				});
 
-				try {
-					const entry = makeTestEntry({
-						branchName: "feature-branch",
-						filesModified: ["src/test.ts"],
-					});
+				const resolver = createMergeResolver({
+					aiResolveEnabled: true,
+					reimagineEnabled: false,
+					platformAI: mockAI,
+				});
 
-					const resolver = createMergeResolver({
-						aiResolveEnabled: true,
-						reimagineEnabled: false,
-					});
+				const result = await resolver.resolve(entry, defaultBranch, repoDir);
 
-					const result = await resolver.resolve(entry, defaultBranch, repoDir);
-
-					// Should fail because prose was rejected
-					expect(result.success).toBe(false);
-				} finally {
-					spawnSpy.mockRestore();
-				}
+				// Should fail because prose was rejected
+				expect(result.success).toBe(false);
 			} finally {
 				await cleanupTempDir(repoDir);
 			}
@@ -932,42 +903,29 @@ describe("createMergeResolver", () => {
 					});
 				});
 
-				// Mock claude to succeed
-				const originalSpawn = Bun.spawn;
-				const selectiveMock = (...args: unknown[]): unknown => {
-					const cmd = args[0] as string[];
-					if (cmd?.[0] === "claude") {
-						return mockSpawnResult("resolved content from AI\n", "", 0);
-					}
-					return originalSpawn.apply(Bun, args as Parameters<typeof Bun.spawn>);
-				};
+				const mockAI = createMockPlatformAI("resolved content from AI\n");
 
-				const spawnSpy = spyOn(Bun, "spawn").mockImplementation(selectiveMock as typeof Bun.spawn);
+				const resolver = createMergeResolver({
+					aiResolveEnabled: true,
+					reimagineEnabled: false,
+					mulchClient: mockMulchClient,
+					platformAI: mockAI,
+				});
 
-				try {
-					const resolver = createMergeResolver({
-						aiResolveEnabled: true,
-						reimagineEnabled: false,
-						mulchClient: mockMulchClient,
-					});
+				const result = await resolver.resolve(entry, defaultBranch, repoDir);
 
-					const result = await resolver.resolve(entry, defaultBranch, repoDir);
+				expect(result.success).toBe(true);
+				expect(result.tier).toBe("ai-resolve");
 
-					expect(result.success).toBe(true);
-					expect(result.tier).toBe("ai-resolve");
+				// Verify record was called
+				expect(recordCalls.length).toBe(1);
+				const call = recordCalls[0];
+				expect(call?.domain).toBe("architecture");
+				expect(call?.options.evidenceBead).toBe("bead-ai-789");
 
-					// Verify record was called
-					expect(recordCalls.length).toBe(1);
-					const call = recordCalls[0];
-					expect(call?.domain).toBe("architecture");
-					expect(call?.options.evidenceBead).toBe("bead-ai-789");
-
-					const desc = call?.options.description ?? "";
-					expect(desc).toContain("resolved");
-					expect(desc).toContain("ai-resolve");
-				} finally {
-					spawnSpy.mockRestore();
-				}
+				const desc = call?.options.description ?? "";
+				expect(desc).toContain("resolved");
+				expect(desc).toContain("ai-resolve");
 			} finally {
 				await cleanupTempDir(repoDir);
 			}
@@ -1007,42 +965,29 @@ describe("createMergeResolver", () => {
 					});
 				});
 
-				// Mock claude to succeed
-				const originalSpawn = Bun.spawn;
-				const selectiveMock = (...args: unknown[]): unknown => {
-					const cmd = args[0] as string[];
-					if (cmd?.[0] === "claude") {
-						return mockSpawnResult("reimagined content\n", "", 0);
-					}
-					return originalSpawn.apply(Bun, args as Parameters<typeof Bun.spawn>);
-				};
+				const mockAI = createMockPlatformAI("reimagined content\n");
 
-				const spawnSpy = spyOn(Bun, "spawn").mockImplementation(selectiveMock as typeof Bun.spawn);
+				const resolver = createMergeResolver({
+					aiResolveEnabled: false,
+					reimagineEnabled: true,
+					mulchClient: mockMulchClient,
+					platformAI: mockAI,
+				});
 
-				try {
-					const resolver = createMergeResolver({
-						aiResolveEnabled: false,
-						reimagineEnabled: true,
-						mulchClient: mockMulchClient,
-					});
+				const result = await resolver.resolve(entry, defaultBranch, repoDir);
 
-					const result = await resolver.resolve(entry, defaultBranch, repoDir);
+				expect(result.success).toBe(true);
+				expect(result.tier).toBe("reimagine");
 
-					expect(result.success).toBe(true);
-					expect(result.tier).toBe("reimagine");
+				// Verify record was called
+				expect(recordCalls.length).toBe(1);
+				const call = recordCalls[0];
+				expect(call?.domain).toBe("architecture");
+				expect(call?.options.evidenceBead).toBe("bead-reimagine-xyz");
 
-					// Verify record was called
-					expect(recordCalls.length).toBe(1);
-					const call = recordCalls[0];
-					expect(call?.domain).toBe("architecture");
-					expect(call?.options.evidenceBead).toBe("bead-reimagine-xyz");
-
-					const desc = call?.options.description ?? "";
-					expect(desc).toContain("resolved");
-					expect(desc).toContain("reimagine");
-				} finally {
-					spawnSpy.mockRestore();
-				}
+				const desc = call?.options.description ?? "";
+				expect(desc).toContain("resolved");
+				expect(desc).toContain("reimagine");
 			} finally {
 				await cleanupTempDir(repoDir);
 			}
@@ -1306,37 +1251,54 @@ describe("createMergeResolver", () => {
 					return "Merge conflict resolved at tier ai-resolve. Branch: old-branch. Agent: old-agent. Conflicting files: src/test.ts.";
 				};
 
-				// Capture the prompt sent to claude
+				// Capture the prompt sent to AI
 				let capturedPrompt = "";
-				const originalSpawn = Bun.spawn;
-				const selectiveMock = (...args: unknown[]): unknown => {
-					const cmd = args[0] as string[];
-					if (cmd?.[0] === "claude") {
-						capturedPrompt = cmd[3] ?? "";
-						return mockSpawnResult("resolved content\n", "", 0);
-					}
-					return originalSpawn.apply(Bun, args as Parameters<typeof Bun.spawn>);
+				const mockAI: IPlatformAI = {
+					async call(config) {
+						capturedPrompt = config.userPrompt;
+						return {
+							content: "resolved content\n",
+							modelUsed: "test-model",
+							tokens: {
+								input: 100,
+								output: 50,
+								cacheRead: 0,
+								cacheCreation: 0,
+							},
+							truncated: false,
+							durationMs: 1000,
+						};
+					},
+					async stream(config, onChunk) {
+						const result = await this.call(config);
+						onChunk(result.content);
+						return result;
+					},
+					async isAvailable() {
+						return true;
+					},
+					getDefaultModel() {
+						return "test-model";
+					},
+					async listModels() {
+						return ["test-model"];
+					},
 				};
 
-				const spawnSpy = spyOn(Bun, "spawn").mockImplementation(selectiveMock as typeof Bun.spawn);
+				const resolver = createMergeResolver({
+					aiResolveEnabled: true,
+					reimagineEnabled: false,
+					mulchClient: mockMulchClient,
+					platformAI: mockAI,
+				});
 
-				try {
-					const resolver = createMergeResolver({
-						aiResolveEnabled: true,
-						reimagineEnabled: false,
-						mulchClient: mockMulchClient,
-					});
+				const result = await resolver.resolve(entry, defaultBranch, repoDir);
 
-					const result = await resolver.resolve(entry, defaultBranch, repoDir);
-
-					expect(result.success).toBe(true);
-					expect(result.tier).toBe("ai-resolve");
-					// Verify historical context was included in the prompt
-					expect(capturedPrompt).toContain("Historical context");
-					expect(capturedPrompt).toContain("ai-resolve");
-				} finally {
-					spawnSpy.mockRestore();
-				}
+				expect(result.success).toBe(true);
+				expect(result.tier).toBe("ai-resolve");
+				// Verify historical context was included in the prompt
+				expect(capturedPrompt).toContain("Historical context");
+				expect(capturedPrompt).toContain("ai-resolve");
 			} finally {
 				await cleanupTempDir(repoDir);
 			}
