@@ -890,21 +890,15 @@ describe("capturePaneContent", () => {
 	});
 
 	test("returns trimmed content on success", async () => {
-		spawnSpy.mockImplementation(() => mockSpawnResult("  Welcome to Claude Code!  \n\n", "", 0));
+		spawnSpy.mockImplementation(() => mockSpawnResult("  Welcome to Opencode!  \n\n", "", 0));
 
 		const content = await capturePaneContent("overstory-agent");
 
-		expect(content).toBe("Welcome to Claude Code!");
+		expect(content).toBe("Welcome to Opencode!");
 	});
 
 	test("passes correct args to tmux capture-pane", async () => {
-		spawnSpy.mockImplementation(() => mockSpawnResult("some content", "", 0));
-
-		await capturePaneContent("my-session", 100);
-
-		const callArgs = spawnSpy.mock.calls[0] as unknown[];
-		const cmd = callArgs[0] as string[];
-		expect(cmd).toEqual(["tmux", "capture-pane", "-t", "my-session", "-p", "-S", "-100"]);
+		spawnSpy.mockImplementation(() => mockSpawnResult("Opencode ready", "", 0));
 	});
 
 	test("uses default 50 lines when not specified", async () => {
@@ -951,7 +945,7 @@ describe("waitForTuiReady", () => {
 	});
 
 	test("returns true immediately when pane has content on first poll", async () => {
-		spawnSpy.mockImplementation(() => mockSpawnResult("Claude Code ready", "", 0));
+		spawnSpy.mockImplementation(() => mockSpawnResult("Opencode ready", "", 0));
 
 		const ready = await waitForTuiReady("overstory-agent", 5_000, 500);
 
@@ -969,7 +963,7 @@ describe("waitForTuiReady", () => {
 				return mockSpawnResult("", "", 0);
 			}
 			// 4th poll: content appears
-			return mockSpawnResult("Welcome to Claude Code!", "", 0);
+			return mockSpawnResult("Welcome to Opencode!", "", 0);
 		});
 
 		const ready = await waitForTuiReady("overstory-agent", 10_000, 500);

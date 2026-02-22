@@ -72,7 +72,7 @@ Overstory adds an entire layer of infrastructure on top of your codebase:
 - **Git worktrees** (worktree corruption, pruning orphans, disk space)
 - **SQLite mail system** (WAL file management, database locks, message delivery failures)
 - **Watchdog daemons** (process monitoring, restart loops, stale PID files)
-- **Claude Code hooks** (PreToolUse, PostToolUse, SessionStart — each a potential failure point)
+- **Opencode hooks** (PreToolUse, PostToolUse, SessionStart — each a potential failure point)
 - **Dashboard TUI** (ANSI rendering bugs, terminal compatibility, refresh rate tuning)
 
 Each subsystem is a failure mode you now have to maintain and debug **in addition to your actual project**. A single-agent workflow has zero infrastructure overhead.

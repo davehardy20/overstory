@@ -115,7 +115,7 @@ export interface AgentSession {
 	beadId: string; // Task being worked
 	tmuxSession: string; // Tmux session name
 	state: AgentState;
-	pid: number | null; // Claude Code PID
+	pid: number | null; // Opencode PID
 	parentAgent: string | null; // Who spawned this agent (null = orchestrator)
 	depth: number; // 0 = direct from orchestrator
 	runId: string | null; // Groups sessions in the same orchestrator run

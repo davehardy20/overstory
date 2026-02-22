@@ -38,7 +38,7 @@ function monitorTmuxSession(projectName: string): string {
 
 /**
  * Build the monitor startup beacon — the first message sent to the monitor
- * via tmux send-keys after Claude Code initializes.
+ * via tmux send-keys after Opencode initializes.
  */
 export function buildMonitorBeacon(): string {
 	const timestamp = new Date().toISOString();
@@ -66,7 +66,7 @@ function resolveAttach(args: string[], isTTY: boolean): boolean {
  * 2. Load config
  * 3. Deploy hooks to project root's .claude/ (monitor-specific guards)
  * 4. Create agent identity (if first time)
- * 5. Spawn tmux session at project root with Claude Code
+ * 5. Spawn tmux session at project root with Opencode
  * 6. Send startup beacon
  * 7. Record session in SessionStore (sessions.db)
  */
@@ -145,7 +145,7 @@ async function startMonitor(args: string[]): Promise<void> {
 		const manifest = await manifestLoader.load();
 		const { model, env } = resolveModel(config, manifest, "monitor", "sonnet");
 
-		// Spawn tmux session at project root with Claude Code (interactive mode).
+		// Spawn tmux session at project root with Opencode (interactive mode).
 		// Inject the monitor base definition via --append-system-prompt.
 		const agentDefPath = join(projectRoot, ".overstory", "agent-defs", "monitor.md");
 		const agentDefFile = Bun.file(agentDefPath);
@@ -340,7 +340,7 @@ const MONITOR_HELP = `overstory monitor — Manage the persistent Tier 2 monitor
 Usage: overstory monitor <subcommand> [flags]
 
 Subcommands:
-  start                    Start the monitor (spawns Claude Code at project root)
+  start                    Start the monitor (spawns Opencode at project root)
   stop                     Stop the monitor (kills tmux session)
   status                   Show monitor state
 

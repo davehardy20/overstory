@@ -1,8 +1,8 @@
 # Overstory
 
-Project-agnostic swarm system for Claude Code agent orchestration. Overstory turns a single Claude Code session into a multi-agent team by spawning worker agents in git worktrees via tmux, coordinating them through a custom SQLite mail system, and merging their work back with tiered conflict resolution.
+Project-agnostic swarm system for Opencode agent orchestration. Overstory turns a single Opencode session into a multi-agent team by spawning worker agents in git worktrees via tmux, coordinating them through a custom SQLite mail system, and merging their work back with tiered conflict resolution.
 
-**Your Claude Code session IS the orchestrator.** There is no separate daemon. CLAUDE.md + hooks + the `overstory` CLI provide everything.
+**Your Opencode session IS the orchestrator.** There is no separate daemon. CLAUDE.md + hooks + the `overstory` CLI provide everything.
 
 ## Tech Stack
 
@@ -17,7 +17,7 @@ Project-agnostic swarm system for Claude Code agent orchestration. Overstory tur
 
 ### Orchestrator Model
 
-When you open Claude Code in a project with `.overstory/` initialized:
+When you open Opencode in a project with `.overstory/` initialized:
 1. `SessionStart` hook runs `overstory prime` (loads config, recent activity, mulch expertise)
 2. `UserPromptSubmit` hook runs `overstory mail check --inject` (surfaces new messages from agents)
 3. You use the `overstory` CLI via Bash tool to spawn agents, check status, merge work
@@ -34,9 +34,9 @@ The orchestrator (or a team lead) only passes WHAT. The base definition already 
 ### Hierarchical Delegation
 
 ```
-Orchestrator (your Claude Code session)
-  --> Team Lead (Claude Code in tmux, can spawn sub-workers)
-        --> Specialist Workers (Claude Code in tmux, leaf nodes)
+Orchestrator (your Opencode session)
+  --> Team Lead (Opencode in tmux, can spawn sub-workers)
+        --> Specialist Workers (Opencode in tmux, leaf nodes)
 ```
 
 Depth limit is configurable (default 2). Prevents runaway spawning.
@@ -128,7 +128,7 @@ overstory/                        # This repo (the overstory tool itself)
     metrics/
       store.ts                    # SQLite metrics storage
       summary.ts                  # Metrics reporting
-      transcript.ts               # Claude Code transcript JSONL parser + cost estimation
+      transcript.ts               # Opencode transcript JSONL parser + cost estimation
     doctor/                       # Modular health check system
       *.ts                        # 9 check categories (see `overstory doctor --help`)
   agents/                         # Base agent definitions (the HOW)
@@ -267,7 +267,7 @@ overstory spec write <bead-id>         Write a spec file to .overstory/specs/
 
 ```
 overstory coordinator <sub>            Persistent coordinator agent
-  start                                  Start coordinator (spawns Claude Code at root)
+  start                                  Start coordinator (spawns Opencode at root)
     --attach / --no-attach               Control tmux attach (default: attach on TTY)
     --watchdog                           Auto-start watchdog daemon
     --monitor                            Auto-start Tier 2 monitor agent
@@ -434,7 +434,7 @@ overstory watch                         Start watchdog daemon (Tier 0)
   --interval <ms>  --background
 
 overstory monitor <sub>                Manage Tier 2 monitor agent
-  start                                  Start monitor (spawns Claude Code at root)
+  start                                  Start monitor (spawns Opencode at root)
   stop                                   Stop monitor (kills tmux session)
   status                                 Show monitor state
 

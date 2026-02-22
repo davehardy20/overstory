@@ -479,7 +479,7 @@ describe("startCoordinator", () => {
 		expect(content).toContain("--agent coordinator");
 	});
 
-	test("hooks include ENV_GUARD to avoid affecting user's Claude Code session", async () => {
+	test("hooks include ENV_GUARD to avoid affecting user's Opencode session", async () => {
 		const { deps } = makeDeps();
 		const originalSleep = Bun.sleep;
 		Bun.sleep = (() => Promise.resolve()) as typeof Bun.sleep;

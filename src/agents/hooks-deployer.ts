@@ -30,7 +30,7 @@ const COORDINATION_CAPABILITIES = new Set(["coordinator", "supervisor", "monitor
 const COORDINATION_SAFE_PREFIXES = ["git add", "git commit"];
 
 /**
- * Claude Code native team/task tools that bypass overstory orchestration.
+ * Opencode native team/task tools that bypass overstory orchestration.
  * All overstory agents must use `overstory sling` for delegation, not these.
  */
 const NATIVE_TEAM_TOOLS = [
@@ -114,7 +114,7 @@ const SAFE_BASH_PREFIXES = [
 	"bun run biome",
 ];
 
-/** Hook entry shape matching Claude Code's settings.local.json format. */
+/** Hook entry shape matching Opencode's settings.local.json format. */
 interface HookEntry {
 	matcher: string;
 	hooks: Array<{ type: string; command: string }>;
@@ -133,10 +133,10 @@ function getTemplatePath(): string {
  * Env var guard prefix for hook commands.
  *
  * When hooks are deployed to the project root (e.g. for the coordinator),
- * they affect ALL Claude Code sessions in that directory. This prefix
+ * they affect ALL Opencode sessions in that directory. This prefix
  * ensures hooks only activate for overstory-managed agent sessions
  * (which have OVERSTORY_AGENT_NAME set in their environment) and are
- * no-ops for the user's own Claude Code session.
+ * no-ops for the user's own Opencode session.
  */
 const ENV_GUARD = '[ -z "$OVERSTORY_AGENT_NAME" ] && exit 0;';
 
@@ -200,7 +200,7 @@ export function getPathBoundaryGuards(): HookEntry[] {
 /**
  * Build a PreToolUse guard that blocks a specific tool.
  *
- * Returns a JSON response with decision=block so Claude Code rejects
+ * Returns a JSON response with decision=block so Opencode rejects
  * the tool call before execution.
  */
 function blockGuard(toolName: string, reason: string): HookEntry {
@@ -219,7 +219,7 @@ function blockGuard(toolName: string, reason: string): HookEntry {
 /**
  * Build a Bash guard script that inspects the command from stdin JSON.
  *
- * Claude Code PreToolUse hooks receive `{"tool_name": "Bash", "tool_input": {"command": "..."}, ...}` on stdin.
+ * Opencode PreToolUse hooks receive `{"tool_name": "Bash", "tool_input": {"command": "..."}, ...}` on stdin.
  * This builds a bash script that reads stdin, extracts the command, and checks for
  * dangerous patterns (push to canonical branch, hard reset, wrong branch naming).
  */
@@ -227,7 +227,7 @@ function buildBashGuardScript(agentName: string): string {
 	// The script reads JSON from stdin, extracts the command field, then checks patterns.
 	// Uses parameter expansion to avoid requiring jq (zero runtime deps).
 	const script = [
-		// Only enforce for overstory agent sessions (skip for user's own Claude Code)
+		// Only enforce for overstory agent sessions (skip for user's own Opencode)
 		ENV_GUARD,
 		"read -r INPUT;",
 		// Extract command value from JSON — grab everything after "command": (with optional space)
@@ -301,7 +301,7 @@ export function buildBashFileGuardScript(
 	const dangerPattern = DANGEROUS_BASH_PATTERNS.join("|");
 
 	const script = [
-		// Only enforce for overstory agent sessions (skip for user's own Claude Code)
+		// Only enforce for overstory agent sessions (skip for user's own Opencode)
 		ENV_GUARD,
 		"read -r INPUT;",
 		// Extract command value from JSON (with optional space after colon)
@@ -426,7 +426,7 @@ export function getBashPathBoundaryGuards(): HookEntry[] {
  * - Bash path boundary guards (validates absolute paths stay in worktree)
  *
  * All overstory-managed agents get:
- * - Claude Code native team/task tool blocks (Task, TeamCreate, SendMessage, etc.)
+ * - Opencode native team/task tool blocks (Task, TeamCreate, SendMessage, etc.)
  *   to ensure delegation goes through overstory sling
  *
  * Note: All capabilities also receive Bash danger guards via getDangerGuards().
@@ -434,7 +434,7 @@ export function getBashPathBoundaryGuards(): HookEntry[] {
 export function getCapabilityGuards(capability: string): HookEntry[] {
 	const guards: HookEntry[] = [];
 
-	// Block Claude Code native team/task tools for ALL overstory agents.
+	// Block Opencode native team/task tools for ALL overstory agents.
 	// Agents must use `overstory sling` for delegation, not native Task/Team tools.
 	const teamToolGuards = NATIVE_TEAM_TOOLS.map((tool) =>
 		blockGuard(

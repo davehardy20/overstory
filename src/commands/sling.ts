@@ -123,7 +123,7 @@ export interface BeaconOptions {
 /**
  * Build a structured startup beacon for an agent.
  *
- * The beacon is the first user message sent to a Claude Code agent via
+ * The beacon is the first user message sent to an Opencode agent via
  * tmux send-keys. It provides identity context and a numbered startup
  * protocol so the agent knows exactly what to do on boot.
  *
@@ -597,7 +597,7 @@ export async function slingCommand(args: string[]): Promise<void> {
 			runStore.close();
 		}
 
-		// 13b. Wait for Claude Code TUI to render before sending input.
+		// 13b. Wait for Opencode TUI to render before sending input.
 		// Polling capture-pane is more reliable than a fixed sleep because
 		// TUI init time varies by machine load and model state.
 		await waitForTuiReady(tmuxSessionName);
@@ -614,7 +614,7 @@ export async function slingCommand(args: string[]): Promise<void> {
 		await sendKeys(tmuxSessionName, beacon);
 
 		// 13c. Follow-up Enters with increasing delays to ensure submission.
-		// Claude Code's TUI may consume early Enters during late initialization
+		// Opencode's TUI may consume early Enters during late initialization
 		// (overstory-yhv6). An Enter on an empty input line is harmless.
 		for (const delay of [1_000, 2_000]) {
 			await Bun.sleep(delay);

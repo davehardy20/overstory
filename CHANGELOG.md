@@ -84,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `resolveModel()` signature updated to accept `ModelRef` (provider-qualified strings like `openrouter/openai/gpt-5.3`) alongside simple `ModelAlias` values
 
 #### Costs Command
-- `--self` flag for `overstory costs` — parse the current orchestrator session's Claude Code transcript directly, bypassing metrics.db, useful for real-time cost visibility without agent infrastructure
+- `--self` flag for `overstory costs` — parse the current orchestrator session's Opencode transcript directly, bypassing metrics.db, useful for real-time cost visibility without agent infrastructure
 
 #### Metrics
 - `run_id` column added to `metrics.db` sessions table — enables `overstory costs --run <id>` filtering to work correctly; includes automatic migration for existing databases
@@ -142,8 +142,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Lead Agent Streaming
 - Lead agents now stream `merge_ready` messages per-builder as each completes, instead of batching all merge signals — enables earlier merge pipeline starts
 
-#### Claude Code Command Skills
-- Added `issue-reviews` and `pr-reviews` skills for reviewing GitHub issues and pull requests from within Claude Code
+#### Opencode Command Skills
+- Added `issue-reviews` and `pr-reviews` skills for reviewing GitHub issues and pull requests from within Opencode
 
 #### Testing
 - Test suite grew from 1848 to 1868 tests across 73 files (4771 expect() calls)
@@ -392,7 +392,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PreToolUse hooks mechanically block file-modifying tools (Write/Edit/NotebookEdit) for non-implementation agents (scout, reviewer, coordinator, supervisor)
 - PreToolUse Bash guards block dangerous git operations (`push`, `reset --hard`, `clean -f`, etc.) for all agents
 - Whitelist git add/commit for coordinator/supervisor capabilities while keeping git push blocked
-- Block Claude Code native team/task tools (Task, TeamCreate, etc.) for all overstory agents — enforces overstory sling delegation
+- Block Opencode native team/task tools (Task, TeamCreate, etc.) for all overstory agents — enforces overstory sling delegation
 
 #### Watchdog Improvements
 - ZFC principle: tmux liveness as primary signal, pid check as secondary, sessions.json as tertiary

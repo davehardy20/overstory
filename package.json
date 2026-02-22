@@ -1,7 +1,7 @@
 {
 	"name": "overstory",
 	"version": "0.5.9",
-	"description": "Multi-agent orchestration for Claude Code — spawn worker agents in git worktrees via tmux, coordinate through SQLite mail, merge with tiered conflict resolution",
+	"description": "Multi-agent orchestration for Opencode — spawn worker agents in git worktrees via tmux, coordinate through SQLite mail, merge with tiered conflict resolution",
 	"author": "Jaymin West",
 	"license": "MIT",
 	"type": "module",
@@ -14,7 +14,7 @@
 		"ai",
 		"agents",
 		"orchestration",
-		"claude-code",
+		"opencode",
 		"multi-agent",
 		"swarm",
 		"cli",

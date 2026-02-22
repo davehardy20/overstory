@@ -152,7 +152,7 @@ describe("triageAgent", () => {
 
 		// triageAgent will try to spawn claude which should fail or be killed by timeout.
 		// Short timeout ensures the test doesn't hang even if the claude binary
-		// exists on the system (e.g., inside a Claude Code session).
+		// exists on the system (e.g., inside an Opencode session).
 		const result = await triageAgent({
 			agentName: "test-agent",
 			root: tempRoot,

@@ -1,5 +1,5 @@
 /**
- * Tests for Claude Code transcript JSONL parser.
+ * Tests for Opencode transcript JSONL parser.
  *
  * Uses temp files with real-format JSONL data. No mocks.
  * Philosophy: "never mock what you can use for real" (mx-252b16).

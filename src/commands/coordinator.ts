@@ -235,7 +235,7 @@ function createDefaultMonitor(projectRoot: string): NonNullable<CoordinatorDeps[
 
 /**
  * Build the coordinator startup beacon — the first message sent to the coordinator
- * via tmux send-keys after Claude Code initializes.
+ * via tmux send-keys after Opencode initializes.
  */
 export function buildCoordinatorBeacon(): string {
 	const timestamp = new Date().toISOString();
@@ -256,7 +256,7 @@ export function buildCoordinatorBeacon(): string {
  * 2. Load config
  * 3. Create agent identity (if first time)
  * 4. Deploy hooks to project root's .claude/settings.local.json
- * 5. Spawn tmux session at project root with Claude Code
+ * 5. Spawn tmux session at project root with Opencode
  * 6. Send startup beacon
  * 7. Record session in SessionStore (sessions.db)
  */
@@ -324,7 +324,7 @@ async function startCoordinator(args: string[], deps: CoordinatorDeps = {}): Pro
 		// mail check --inject, and activity tracking via the standard hook pipeline.
 		// The ENV_GUARD prefix on all hooks (both template and generated guards)
 		// ensures they only activate when OVERSTORY_AGENT_NAME is set (i.e. for
-		// the coordinator's tmux session), so the user's own Claude Code session
+		// the coordinator's tmux session), so the user's own Opencode session
 		// at the project root is unaffected.
 		await deployHooks(projectRoot, COORDINATOR_NAME, "coordinator");
 
@@ -351,7 +351,7 @@ async function startCoordinator(args: string[], deps: CoordinatorDeps = {}): Pro
 		const manifest = await manifestLoader.load();
 		const { model, env } = resolveModel(config, manifest, "coordinator", "opus");
 
-		// Spawn tmux session at project root with Claude Code (interactive mode).
+		// Spawn tmux session at project root with Opencode (interactive mode).
 		// Inject the coordinator base definition via --append-system-prompt so the
 		// coordinator knows its role, hierarchy rules, and delegation patterns
 		// (overstory-gaio, overstory-0kwf).
@@ -394,7 +394,7 @@ async function startCoordinator(args: string[], deps: CoordinatorDeps = {}): Pro
 
 		store.upsert(session);
 
-		// Wait for Claude Code TUI to render before sending input
+		// Wait for Opencode TUI to render before sending input
 		await tmux.waitForTuiReady(tmuxSession);
 		await Bun.sleep(1_000);
 
@@ -670,7 +670,7 @@ const COORDINATOR_HELP = `overstory coordinator — Manage the persistent coordi
 Usage: overstory coordinator <subcommand> [flags]
 
 Subcommands:
-  start                    Start the coordinator (spawns Claude Code at project root)
+  start                    Start the coordinator (spawns Opencode at project root)
   stop                     Stop the coordinator (kills tmux session)
   status                   Show coordinator state
 

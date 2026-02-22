@@ -226,7 +226,7 @@ export async function generateOverlay(config: OverlayConfig): Promise<string> {
  *
  * Agent overlays must NEVER be written to the canonical repo root -- they belong
  * in worktrees. Writing an overlay to the project root overwrites the orchestrator's
- * `.claude/CLAUDE.md`, breaking the user's own Claude Code session (overstory-uwg4).
+ * `.claude/CLAUDE.md`, breaking the user's own Opencode session (overstory-uwg4).
  *
  * Uses deterministic path comparison instead of checking for `.overstory/config.yaml`
  * because when dogfooding (running overstory on its own repo), that file is tracked

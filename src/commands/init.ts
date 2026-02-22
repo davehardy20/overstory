@@ -269,7 +269,7 @@ function buildAgentManifest(): AgentManifest {
  */
 function buildHooksJson(): string {
 	// Tool name extraction: reads hook stdin JSON and extracts tool_name field.
-	// Claude Code sends {"tool_name":"Bash","tool_input":{...}} on stdin for
+	// Opencode sends {"tool_name":"Bash","tool_input":{...}} on stdin for
 	// PreToolUse/PostToolUse hooks.
 	const toolNameExtract =
 		'read -r INPUT; TOOL_NAME=$(echo "$INPUT" | sed \'s/.*"tool_name": *"\\([^"]*\\)".*/\\1/\');';
@@ -456,9 +456,9 @@ export const OVERSTORY_GITIGNORE = `# Wildcard+whitelist: ignore everything, whi
  */
 export const OVERSTORY_README = `# .overstory/
 
-This directory is managed by [overstory](https://github.com/jayminwest/overstory) — a multi-agent orchestration system for Claude Code.
+This directory is managed by [overstory](https://github.com/jayminwest/overstory) — a multi-agent orchestration system for Opencode.
 
-Overstory turns a single Claude Code session into a multi-agent team by spawning worker agents in git worktrees via tmux, coordinating them through a custom SQLite mail system, and merging their work back with tiered conflict resolution.
+Overstory turns a single Opencode session into a multi-agent team by spawning worker agents in git worktrees via tmux, coordinating them through a custom SQLite mail system, and merging their work back with tiered conflict resolution.
 
 ## Key Commands
 
@@ -474,7 +474,7 @@ Overstory turns a single Claude Code session into a multi-agent team by spawning
 
 - \`config.yaml\`             — Project configuration
 - \`agent-manifest.json\`     — Agent registry
-- \`hooks.json\`              — Claude Code hooks config
+- \`hooks.json\`              — Opencode hooks config
 - \`agent-defs/\`             — Agent definition files (.md)
 - \`specs/\`                  — Task specifications
 - \`agents/\`                 — Per-agent state and identity
@@ -631,6 +631,6 @@ export async function initCommand(args: string[]): Promise<void> {
 	}
 
 	process.stdout.write("\nDone.\n");
-	process.stdout.write("  Next: run `overstory hooks install` to enable Claude Code hooks.\n");
+	process.stdout.write("  Next: run `overstory hooks install` to enable Opencode hooks.\n");
 	process.stdout.write("  Then: run `overstory status` to see the current state.\n");
 }

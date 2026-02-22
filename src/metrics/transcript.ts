@@ -1,5 +1,5 @@
 /**
- * Parser for Claude Code transcript JSONL files.
+ * Parser for Opencode transcript JSONL files.
  *
  * Extracts token usage data from assistant-type entries in transcript files
  * at ~/.claude/projects/{project-slug}/{session-id}.jsonl.
@@ -124,7 +124,7 @@ function extractUsageFromEntry(entry: unknown): {
 }
 
 /**
- * Parse a Claude Code transcript JSONL file and aggregate token usage.
+ * Parse an Opencode transcript JSONL file and aggregate token usage.
  *
  * Reads the file line by line, extracting usage data from each assistant
  * entry. Returns aggregated totals and the model from the first assistant turn.

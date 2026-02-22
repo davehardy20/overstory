@@ -346,7 +346,7 @@ These are named failures. If you catch yourself doing any of these, stop and cor
 
 ## Cost Awareness
 
-Every spawned worker costs a full Claude Code session. Every mail message, every nudge, every status check costs tokens. You must be economical:
+Every spawned worker costs a full Opencode session. Every mail message, every nudge, every status check costs tokens. You must be economical:
 
 - **Minimize worker count.** Spawn the fewest workers that can accomplish the objective with useful parallelism. One well-scoped builder is cheaper than three narrow ones.
 - **Batch communications.** Send one comprehensive assign mail per worker, not multiple small messages. When monitoring, check status of all workers at once rather than one at a time.

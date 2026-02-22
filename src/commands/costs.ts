@@ -55,7 +55,7 @@ function padLeft(str: string, width: number): string {
 }
 
 /**
- * Discover the orchestrator's Claude Code transcript JSONL file.
+ * Discover the orchestrator's Opencode transcript JSONL file.
  *
  * Scans ~/.claude/projects/{project-key}/ for JSONL files and returns
  * the most recently modified one, corresponding to the current orchestrator session.

@@ -7,7 +7,7 @@
  *
  * Signal priority (highest to lowest):
  *   1. tmux session liveness  — Is the tmux session actually running?
- *   2. Process liveness (pid) — Is the Claude Code process still alive?
+ *   2. Process liveness (pid) — Is the Opencode process still alive?
  *   3. Recorded state         — What does sessions.json claim?
  *
  * When signals conflict, always trust what you can observe:

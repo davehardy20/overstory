@@ -2,7 +2,7 @@
  * `overstory prime` command.
  *
  * Loads context for the orchestrator or a specific agent and outputs it
- * to stdout for injection into Claude Code's context via hooks.
+ * to stdout for injection into Opencode's context via hooks.
  *
  * Called by the SessionStart hook.
  */
@@ -154,7 +154,7 @@ async function healGitignore(overstoryDir: string): Promise<void> {
  * Prime command entry point.
  *
  * Gathers project state and outputs context to stdout for injection
- * into Claude Code's context.
+ * into Opencode's context.
  *
  * @param args - CLI arguments after "prime" subcommand
  */

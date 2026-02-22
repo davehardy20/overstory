@@ -144,7 +144,7 @@ function getAgentSession(projectRoot: string, agentName: string): AgentSession |
 
 /**
  * Read one line of JSON from stdin. Returns parsed object or null on failure.
- * Used when --stdin flag is present to receive hook payload from Claude Code.
+ * Used when --stdin flag is present to receive hook payload from Opencode.
  *
  * Reads ALL chunks from stdin to handle large payloads that exceed a single buffer.
  */
@@ -176,7 +176,7 @@ async function readStdinJson(): Promise<Record<string, unknown> | null> {
 }
 
 /**
- * Resolve the path to a Claude Code transcript JSONL file.
+ * Resolve the path to an Opencode transcript JSONL file.
  * Tries direct construction first, then searches all project directories.
  * Caches the found path for faster subsequent lookups.
  */
@@ -354,7 +354,7 @@ Arguments:
 Options:
   --agent <name>            Agent name (required)
   --tool-name <name>        Tool name (for tool-start/tool-end events, legacy)
-  --transcript <path>       Path to Claude Code transcript JSONL (for session-end, legacy)
+  --transcript <path>       Path to Opencode transcript JSONL (for session-end, legacy)
   --stdin                   Read hook payload JSON from stdin (preferred)
   --help, -h                Show this help`;
 

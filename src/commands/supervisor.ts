@@ -115,7 +115,7 @@ function parseFlags(args: string[]): {
  * 4. Check no supervisor with same name is already running
  * 5. Deploy hooks with capability "supervisor"
  * 6. Create identity if first run
- * 7. Spawn tmux session at project root with Claude Code
+ * 7. Spawn tmux session at project root with Opencode
  * 8. Send startup beacon
  * 9. Record session in SessionStore (sessions.db)
  */
@@ -204,7 +204,7 @@ async function startSupervisor(args: string[]): Promise<void> {
 		const manifest = await manifestLoader.load();
 		const { model, env } = resolveModel(config, manifest, "supervisor", "opus");
 
-		// Spawn tmux session at project root with Claude Code (interactive mode).
+		// Spawn tmux session at project root with Opencode (interactive mode).
 		// Inject the supervisor base definition via --append-system-prompt.
 		const tmuxSession = `overstory-${config.project.name}-supervisor-${flags.name}`;
 		const agentDefPath = join(projectRoot, ".overstory", "agent-defs", "supervisor.md");
@@ -220,7 +220,7 @@ async function startSupervisor(args: string[]): Promise<void> {
 			OVERSTORY_AGENT_NAME: flags.name,
 		});
 
-		// Wait for Claude Code TUI to render before sending input
+		// Wait for Opencode TUI to render before sending input
 		await waitForTuiReady(tmuxSession);
 		await Bun.sleep(1_000);
 
@@ -477,7 +477,7 @@ const SUPERVISOR_HELP = `overstory supervisor — Manage per-project supervisor 
 Usage: overstory supervisor <subcommand> [flags]
 
 Subcommands:
-  start                    Start a supervisor (spawns Claude Code at project root)
+  start                    Start a supervisor (spawns Opencode at project root)
   stop                     Stop a supervisor (kills tmux session)
   status                   Show supervisor state
 
