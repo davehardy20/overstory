@@ -1256,7 +1256,7 @@ Wave FINAL (Review):
 
 ---
 
-- [ ] 27. Update overlay.md.tmpl
+ [x] 27. Update overlay.md.tmpl
 
   **What to do**:
   - Modify `templates/overlay.md.tmpl` to be platform-aware
@@ -1285,7 +1285,7 @@ Wave FINAL (Review):
   - Message: `feat(templates): make overlay template platform-aware`
   - Files: `templates/overlay.md.tmpl`
 
-- [ ] 28. Create opencode-hooks.json.tmpl
+ [x] 28. Create opencode-hooks.json.tmpl
 
   **What to do**:
   - Create `templates/opencode-hooks.json.tmpl` for Opencode hook configuration
@@ -1313,7 +1313,7 @@ Wave FINAL (Review):
   - Message: `feat(templates): add Opencode hooks template`
   - Files: `templates/opencode-hooks.json.tmpl`
 
-- [ ] 29. Update CLAUDE.md → AGENTS.md
+ [x] 29. Update CLAUDE.md → AGENTS.md
 
   **What to do**:
   - Update root `CLAUDE.md` with Opencode instructions
@@ -1341,7 +1341,7 @@ Wave FINAL (Review):
   - Message: `docs: add Opencode instructions to CLAUDE.md`
   - Files: `CLAUDE.md`
 
-- [ ] 30. Create Migration Guide
+ [x] 30. Create Migration Guide
 
   **What to do**:
   - Create `MIGRATION.md` with migration instructions
