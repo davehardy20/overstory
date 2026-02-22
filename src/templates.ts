@@ -10,6 +10,48 @@ export const TEMPLATE_FILES = {
 } as const;
 
 /**
+ * Cached repo root path for template resolution.
+ * Computed once and reused to avoid repeated filesystem traversal.
+ */
+let cachedRepoRoot: string | null = null;
+
+/**
+ * Find the repository root by looking for templates directory.
+ * Searches upward from this file's location until it finds templates/.
+ */
+async function findRepoRoot(): Promise<string> {
+	if (cachedRepoRoot) {
+		return cachedRepoRoot;
+	}
+
+	// Start from this file's directory and search upward
+	let currentDir = dirname(import.meta.dir);
+	const maxDepth = 5; // Prevent infinite loops
+
+	for (let i = 0; i < maxDepth; i++) {
+		// Check if templates directory exists here
+		const templatesHooks = Bun.file(join(currentDir, "templates", "hooks.json.tmpl"));
+		const exists = await templatesHooks.exists();
+		if (exists) {
+			cachedRepoRoot = currentDir;
+			return currentDir;
+		}
+
+		// Not found here, go up one level
+		const parentDir = dirname(currentDir);
+		if (parentDir === currentDir) {
+			// Reached filesystem root
+			break;
+		}
+		currentDir = parentDir;
+	}
+
+	// Fallback: assume we're in src/ and repo root is one level up
+	cachedRepoRoot = dirname(import.meta.dir);
+	return cachedRepoRoot;
+}
+
+/**
  * Load a template file content.
  *
  * Works in both development mode (bun src/index.ts) and compiled binary mode.
@@ -33,9 +75,10 @@ export async function loadTemplate(templateName: string): Promise<string> {
 		// Fall through to filesystem lookup
 	}
 
-	// Fall back to filesystem (works in development mode)
-	// import.meta.dir points to src/ in dev, so we go up one level to reach repo root
-	const filesystemPath = join(dirname(import.meta.dir), "..", templateName);
+	// Fall back to filesystem (works in development and test modes)
+	// Use robust repo root detection instead of assuming import.meta.dir location
+	const repoRoot = await findRepoRoot();
+	const filesystemPath = join(repoRoot, templateName);
 	const file = Bun.file(filesystemPath);
 	const exists = await file.exists();
 
@@ -58,8 +101,9 @@ export async function loadTemplate(templateName: string): Promise<string> {
  * @param templateName - The template file path relative to repo root
  * @returns The absolute filesystem path to the template
  */
-export function getTemplatePath(templateName: string): string {
-	return join(dirname(import.meta.dir), "..", templateName);
+export async function getTemplatePath(templateName: string): Promise<string> {
+	const repoRoot = await findRepoRoot();
+	return join(repoRoot, templateName);
 }
 
 /**
@@ -81,8 +125,9 @@ export async function templateExists(templateName: string): Promise<boolean> {
 		// Fall through to filesystem check
 	}
 
-	// Check filesystem
-	const filesystemPath = join(dirname(import.meta.dir), "..", templateName);
+	// Check filesystem using robust repo root detection
+	const repoRoot = await findRepoRoot();
+	const filesystemPath = join(repoRoot, templateName);
 	const file = Bun.file(filesystemPath);
 	return await file.exists();
 }

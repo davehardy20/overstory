@@ -446,7 +446,7 @@ describe("startCoordinator", () => {
 		// Note: sendKeys is from tmux, which we still use for TUI interaction
 	});
 
-	test("deploys hooks to project root .claude/settings.local.json", async () => {
+	test("deploys hooks to project root .opencode/settings.json", async () => {
 		const { deps } = makeDeps();
 		const originalSleep = Bun.sleep;
 		Bun.sleep = (() => Promise.resolve()) as typeof Bun.sleep;
@@ -457,8 +457,8 @@ describe("startCoordinator", () => {
 			Bun.sleep = originalSleep;
 		}
 
-		// Verify .claude/settings.local.json was created at the project root
-		const settingsPath = join(tempDir, ".claude", "settings.local.json");
+		// Verify .opencode/settings.json was created at the project root
+		const settingsPath = join(tempDir, ".opencode", "settings.json");
 		const settingsFile = Bun.file(settingsPath);
 		expect(await settingsFile.exists()).toBe(true);
 
@@ -487,14 +487,14 @@ describe("startCoordinator", () => {
 			Bun.sleep = originalSleep;
 		}
 
-		const settingsPath = join(tempDir, ".claude", "settings.local.json");
+		const settingsPath = join(tempDir, ".opencode", "settings.json");
 		const content = await Bun.file(settingsPath).text();
 
 		// The hooks should reference the coordinator agent name
 		expect(content).toContain("--agent coordinator");
 	});
 
-	test("hooks include ENV_GUARD to avoid affecting user's Claude Code session", async () => {
+	test("hooks include ENV_GUARD to avoid affecting user's Opencode session", async () => {
 		const { deps } = makeDeps();
 		const originalSleep = Bun.sleep;
 		Bun.sleep = (() => Promise.resolve()) as typeof Bun.sleep;
@@ -505,14 +505,14 @@ describe("startCoordinator", () => {
 			Bun.sleep = originalSleep;
 		}
 
-		const settingsPath = join(tempDir, ".claude", "settings.local.json");
+		const settingsPath = join(tempDir, ".opencode", "settings.json");
 		const content = await Bun.file(settingsPath).text();
 
 		// PreToolUse guards should include the ENV_GUARD prefix
 		expect(content).toContain("OVERSTORY_AGENT_NAME");
 	});
 
-	test("injects agent definition via --append-system-prompt when agent-defs/coordinator.md exists", async () => {
+	test("deploys agent definition to worktree when agent-defs/coordinator.md exists", async () => {
 		// Deploy a coordinator agent definition
 		const agentDefsDir = join(overstoryDir, "agent-defs");
 		await mkdir(agentDefsDir, { recursive: true });
@@ -533,8 +533,8 @@ describe("startCoordinator", () => {
 
 		expect(spawnerCalls).toHaveLength(1);
 		const cmd = spawnerCalls[0]?.config.command ?? "";
-		expect(cmd).toContain("--append-system-prompt");
-		expect(cmd).toContain("# Coordinator Agent");
+		// Opencode uses AGENTS.md context file deployed by hooks, not --append-system-prompt
+		expect(cmd).toBe("opencode");
 	});
 
 	test("reads model from manifest instead of hardcoding", async () => {
@@ -569,9 +569,10 @@ describe("startCoordinator", () => {
 		}
 
 		expect(spawnerCalls).toHaveLength(1);
-		const cmd = spawnerCalls[0]?.config.command ?? "";
-		expect(cmd).toContain("--model sonnet");
-		expect(cmd).not.toContain("--model opus");
+		const extra = spawnerCalls[0]?.config.extra ?? {};
+		// Opencode uses extra.model for model selection
+		expect(extra.model).toContain("sonnet");
+		expect(extra.model).not.toContain("opus");
 	});
 
 	test("--json outputs JSON with expected fields", async () => {

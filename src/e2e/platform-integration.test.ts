@@ -102,7 +102,7 @@ describe("E2E: Platform Integration Workflows", () => {
 		test("full lifecycle: init → hooks → verify context files", async () => {
 			const claudeAvailable = await isCommandAvailable("claude");
 			if (!claudeAvailable) {
-				test.skip("Claude not available");
+				// Skip test if Claude not available
 				return;
 			}
 
@@ -114,8 +114,14 @@ describe("E2E: Platform Integration Workflows", () => {
 			const configFile = Bun.file(join(overstoryDir, "config.yaml"));
 			expect(await configFile.exists()).toBe(true);
 
+			// Update config to explicitly use Claude platform for this test
+			await Bun.write(
+				join(overstoryDir, "config.yaml"),
+				`project:\n  name: test\n  root: ${tempDir}\n  canonicalBranch: main\nplatform:\n  type: claude\n`,
+			);
+
 			const config = await loadConfig(tempDir);
-			expect(config.platform.type).toBeDefined();
+			expect(config.platform.type).toBe("claude");
 
 			const platform = await createPlatform("claude");
 			expect(platform.id).toBe("claude-code");
@@ -143,7 +149,7 @@ describe("E2E: Platform Integration Workflows", () => {
 		test("context file generation for worktrees", async () => {
 			const claudeAvailable = await isCommandAvailable("claude");
 			if (!claudeAvailable) {
-				test.skip("Claude not available");
+				// Skip test if Claude not available
 				return;
 			}
 
@@ -186,7 +192,7 @@ describe("E2E: Platform Integration Workflows", () => {
 		test("full lifecycle: init → hooks → verify context files", async () => {
 			const opencodeAvailable = await isCommandAvailable("opencode");
 			if (!opencodeAvailable) {
-				test.skip("Opencode not available");
+				// Skip test if Opencode not available
 				return;
 			}
 
@@ -227,7 +233,7 @@ describe("E2E: Platform Integration Workflows", () => {
 		test("context file generation for worktrees", async () => {
 			const opencodeAvailable = await isCommandAvailable("opencode");
 			if (!opencodeAvailable) {
-				test.skip("Opencode not available");
+				// Skip test if Opencode not available
 				return;
 			}
 

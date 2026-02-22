@@ -95,6 +95,21 @@ export class OpencodeMetrics implements IPlatformMetrics {
 	}
 
 	/**
+	 * Discover the orchestrator's transcript for a specific project.
+	 *
+	 * Opencode stores transcripts in ~/.config/opencode/sessions/{agent}/{session}.jsonl
+	 * The orchestrator is identified by the "coordinator" agent name.
+	 *
+	 * @param _projectRoot - The project root path (not used for opencode)
+	 * @returns The most recently modified coordinator transcript, or null if none found
+	 */
+	async discoverOrchestratorTranscript(_projectRoot: string): Promise<TranscriptDiscovery | null> {
+		// For opencode, look for coordinator transcripts in the sessions directory
+		const transcripts = await this.discoverTranscripts({ agentName: "coordinator", limit: 1 });
+		return transcripts[0] ?? null;
+	}
+
+	/**
 	 * Parse a transcript file and extract metrics.
 	 *
 	 * Parses JSONL format transcript files and extracts:

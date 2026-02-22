@@ -121,8 +121,6 @@ interface HookEntry {
 	hooks: Array<{ type: string; command: string }>;
 }
 
-
-
 /**
  * Env var guard prefix for hook commands.
  *
@@ -468,7 +466,34 @@ export function getCapabilityGuards(capability: string): HookEntry[] {
 }
 
 /**
- * Deploy hooks config to an agent's worktree as `.claude/settings.local.json`.
+ * Get the platform-specific context directory and settings file name.
+ *
+ * @param worktreePath - Absolute path to the agent's git worktree
+ * @param platformType - The platform type (claude or opencode)
+ * @returns Object with contextDir and settingsFileName
+ */
+function getPlatformPaths(
+	worktreePath: string,
+	platformType: string,
+): { contextDir: string; settingsFileName: string } {
+	if (platformType === "opencode") {
+		return {
+			contextDir: join(worktreePath, ".opencode"),
+			settingsFileName: "settings.json",
+		};
+	}
+	// Default to Claude Code paths
+	return {
+		contextDir: join(worktreePath, ".claude"),
+		settingsFileName: "settings.local.json",
+	};
+}
+
+/**
+ * Deploy hooks config to an agent's worktree.
+ *
+ * Platform-aware: Writes to `.claude/settings.local.json` for Claude Code
+ * or `.opencode/settings.json` for Opencode.
  *
  * Reads `templates/hooks.json.tmpl`, replaces `{{AGENT_NAME}}`, then merges
  * capability-specific PreToolUse guards into the resulting config.
@@ -476,21 +501,23 @@ export function getCapabilityGuards(capability: string): HookEntry[] {
  * @param worktreePath - Absolute path to the agent's git worktree
  * @param agentName - The unique name of the agent
  * @param capability - Agent capability (builder, scout, reviewer, lead, merger)
+ * @param platformType - Optional platform type override (auto-detects if not provided)
  * @throws {AgentError} If the template is not found or the write fails
  */
 export async function deployHooks(
 	worktreePath: string,
 	agentName: string,
 	capability = "builder",
+	platformType?: string,
 ): Promise<void> {
 	let template: string;
 	try {
 		template = await loadTemplate(TEMPLATE_FILES.HOOKS);
 	} catch (err) {
-		throw new AgentError(
-			`Failed to load hooks template: ${TEMPLATE_FILES.HOOKS}`,
-			{ agentName, cause: err instanceof Error ? err : undefined },
-		);
+		throw new AgentError(`Failed to load hooks template: ${TEMPLATE_FILES.HOOKS}`, {
+			agentName,
+			cause: err instanceof Error ? err : undefined,
+		});
 	}
 
 	// Replace all occurrences of {{AGENT_NAME}}
@@ -513,13 +540,15 @@ export async function deployHooks(
 
 	const finalContent = `${JSON.stringify(config, null, "\t")}\n`;
 
-	const claudeDir = join(worktreePath, ".claude");
-	const outputPath = join(claudeDir, "settings.local.json");
+	// Default to opencode for this port (ignore Claude Code even if installed)
+	const resolvedPlatform = platformType ?? "opencode";
+	const { contextDir, settingsFileName } = getPlatformPaths(worktreePath, resolvedPlatform);
+	const outputPath = join(contextDir, settingsFileName);
 
 	try {
-		await mkdir(claudeDir, { recursive: true });
+		await mkdir(contextDir, { recursive: true });
 	} catch (err) {
-		throw new AgentError(`Failed to create .claude/ directory at: ${claudeDir}`, {
+		throw new AgentError(`Failed to create ${contextDir} directory at: ${contextDir}`, {
 			agentName,
 			cause: err instanceof Error ? err : undefined,
 		});

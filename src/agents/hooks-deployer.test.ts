@@ -25,12 +25,12 @@ describe("deployHooks", () => {
 		await rm(tempDir, { recursive: true, force: true });
 	});
 
-	test("creates .claude/settings.local.json in worktree directory", async () => {
+	test("creates .opencode/settings.json in worktree directory", async () => {
 		const worktreePath = join(tempDir, "worktree");
 
 		await deployHooks(worktreePath, "test-agent");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const exists = await Bun.file(outputPath).exists();
 		expect(exists).toBe(true);
 	});
@@ -40,7 +40,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "my-builder");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		expect(content).toContain("my-builder");
 		expect(content).not.toContain("{{AGENT_NAME}}");
@@ -51,7 +51,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "scout-alpha");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 
 		// The template has {{AGENT_NAME}} in multiple hook commands
@@ -65,7 +65,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "json-test-agent");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		expect(parsed).toBeDefined();
@@ -77,7 +77,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "hook-check");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		expect(parsed.hooks.SessionStart).toBeDefined();
@@ -90,7 +90,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "hook-check");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		expect(parsed.hooks.UserPromptSubmit).toBeDefined();
@@ -102,7 +102,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "hook-check");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		expect(parsed.hooks.PreToolUse).toBeDefined();
@@ -114,7 +114,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "hook-check");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		expect(parsed.hooks.PostToolUse).toBeDefined();
@@ -126,7 +126,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "hook-check");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		expect(parsed.hooks.Stop).toBeDefined();
@@ -138,7 +138,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "mail-check-agent");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const postToolUse = parsed.hooks.PostToolUse;
@@ -158,7 +158,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "mulch-diff-agent");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const postToolUse = parsed.hooks.PostToolUse;
@@ -173,7 +173,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "hook-check");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		expect(parsed.hooks.PreCompact).toBeDefined();
@@ -185,7 +185,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "all-hooks");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const hookTypes = Object.keys(parsed.hooks);
@@ -203,7 +203,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "prime-agent");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const sessionStart = parsed.hooks.SessionStart[0];
@@ -217,7 +217,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "mail-agent");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const userPrompt = parsed.hooks.UserPromptSubmit[0];
@@ -232,7 +232,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "compact-agent");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preCompact = parsed.hooks.PreCompact[0];
@@ -248,7 +248,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "stdin-agent");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 
@@ -267,7 +267,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "stdin-agent");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const postToolUse = parsed.hooks.PostToolUse[0];
@@ -282,7 +282,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "mail-debounce-agent");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const postToolUse = parsed.hooks.PostToolUse[0];
@@ -303,7 +303,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "stdin-agent");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const stop = parsed.hooks.Stop[0];
@@ -318,7 +318,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "learn-agent");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const stop = parsed.hooks.Stop[0];
@@ -332,7 +332,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "no-sed-agent");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 
@@ -348,28 +348,28 @@ describe("deployHooks", () => {
 		expect(postToolUse.hooks[0].command).not.toContain("TOOL_NAME=$(");
 	});
 
-	test("creates .claude directory even if worktree already exists", async () => {
+	test("creates .opencode directory even if worktree already exists", async () => {
 		const worktreePath = join(tempDir, "existing-worktree");
 		const { mkdir } = await import("node:fs/promises");
 		await mkdir(worktreePath, { recursive: true });
 
 		await deployHooks(worktreePath, "test-agent");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const exists = await Bun.file(outputPath).exists();
 		expect(exists).toBe(true);
 	});
 
-	test("overwrites existing settings.local.json", async () => {
+	test("overwrites existing settings.json", async () => {
 		const worktreePath = join(tempDir, "worktree");
-		const claudeDir = join(worktreePath, ".claude");
+		const opencodeDir = join(worktreePath, ".opencode");
 		const { mkdir } = await import("node:fs/promises");
-		await mkdir(claudeDir, { recursive: true });
-		await Bun.write(join(claudeDir, "settings.local.json"), '{"old": true}');
+		await mkdir(opencodeDir, { recursive: true });
+		await Bun.write(join(opencodeDir, "settings.json"), '{"old": true}');
 
 		await deployHooks(worktreePath, "new-agent");
 
-		const content = await Bun.file(join(claudeDir, "settings.local.json")).text();
+		const content = await Bun.file(join(opencodeDir, "settings.json")).text();
 		expect(content).toContain("new-agent");
 		expect(content).not.toContain('"old"');
 	});
@@ -379,7 +379,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "agent-with-dashes-123");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		expect(content).toContain("agent-with-dashes-123");
 		// Should still be valid JSON
@@ -397,7 +397,7 @@ describe("deployHooks", () => {
 
 		// Successful deployment proves the template exists
 		await deployHooks(worktreePath, "template-exists");
-		const exists = await Bun.file(join(worktreePath, ".claude", "settings.local.json")).exists();
+		const exists = await Bun.file(join(worktreePath, ".opencode", "settings.json")).exists();
 		expect(exists).toBe(true);
 	});
 
@@ -432,7 +432,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "scout-agent", "scout");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse;
@@ -466,7 +466,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "reviewer-agent", "reviewer");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse;
@@ -486,7 +486,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "lead-agent", "lead");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse;
@@ -510,7 +510,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "builder-agent", "builder");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse;
@@ -553,7 +553,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "merger-agent", "merger");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse;
@@ -573,7 +573,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "default-agent");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse;
@@ -593,7 +593,7 @@ describe("deployHooks", () => {
 
 		await deployHooks(worktreePath, "order-agent", "scout");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse;
@@ -822,7 +822,7 @@ describe("getDangerGuards", () => {
 				const worktreePath = join(tempDir, `${cap}-wt`);
 				await deployHooks(worktreePath, `${cap}-agent`, cap);
 
-				const outputPath = join(worktreePath, ".claude", "settings.local.json");
+				const outputPath = join(worktreePath, ".opencode", "settings.json");
 				const content = await Bun.file(outputPath).text();
 				const parsed = JSON.parse(content);
 				const preToolUse = parsed.hooks.PreToolUse;
@@ -847,7 +847,7 @@ describe("getDangerGuards", () => {
 			const worktreePath = join(tempDir, "scout-order-wt");
 			await deployHooks(worktreePath, "scout-order", "scout");
 
-			const outputPath = join(worktreePath, ".claude", "settings.local.json");
+			const outputPath = join(worktreePath, ".opencode", "settings.json");
 			const content = await Bun.file(outputPath).text();
 			const parsed = JSON.parse(content);
 			const preToolUse = parsed.hooks.PreToolUse;
@@ -1019,10 +1019,8 @@ describe("structural enforcement integration", () => {
 		await deployHooks(scoutPath, "scout-1", "scout");
 		await deployHooks(builderPath, "builder-1", "builder");
 
-		const scoutContent = await Bun.file(join(scoutPath, ".claude", "settings.local.json")).text();
-		const builderContent = await Bun.file(
-			join(builderPath, ".claude", "settings.local.json"),
-		).text();
+		const scoutContent = await Bun.file(join(scoutPath, ".opencode", "settings.json")).text();
+		const builderContent = await Bun.file(join(builderPath, ".opencode", "settings.json")).text();
 
 		const scoutPreToolUse = JSON.parse(scoutContent).hooks.PreToolUse;
 		const builderPreToolUse = JSON.parse(builderContent).hooks.PreToolUse;
@@ -1038,10 +1036,8 @@ describe("structural enforcement integration", () => {
 		await deployHooks(scoutPath, "scout-1", "scout");
 		await deployHooks(reviewerPath, "reviewer-1", "reviewer");
 
-		const scoutContent = await Bun.file(join(scoutPath, ".claude", "settings.local.json")).text();
-		const reviewerContent = await Bun.file(
-			join(reviewerPath, ".claude", "settings.local.json"),
-		).text();
+		const scoutContent = await Bun.file(join(scoutPath, ".opencode", "settings.json")).text();
+		const reviewerContent = await Bun.file(join(reviewerPath, ".opencode", "settings.json")).text();
 
 		const scoutPreToolUse = JSON.parse(scoutContent).hooks.PreToolUse;
 		const reviewerPreToolUse = JSON.parse(reviewerContent).hooks.PreToolUse;
@@ -1062,8 +1058,8 @@ describe("structural enforcement integration", () => {
 		await deployHooks(leadPath, "lead-1", "lead");
 		await deployHooks(scoutPath, "scout-1", "scout");
 
-		const leadContent = await Bun.file(join(leadPath, ".claude", "settings.local.json")).text();
-		const scoutContent = await Bun.file(join(scoutPath, ".claude", "settings.local.json")).text();
+		const leadContent = await Bun.file(join(leadPath, ".opencode", "settings.json")).text();
+		const scoutContent = await Bun.file(join(scoutPath, ".opencode", "settings.json")).text();
 
 		const leadPreToolUse = JSON.parse(leadContent).hooks.PreToolUse;
 		const scoutPreToolUse = JSON.parse(scoutContent).hooks.PreToolUse;
@@ -1084,10 +1080,8 @@ describe("structural enforcement integration", () => {
 		await deployHooks(builderPath, "builder-1", "builder");
 		await deployHooks(mergerPath, "merger-1", "merger");
 
-		const builderContent = await Bun.file(
-			join(builderPath, ".claude", "settings.local.json"),
-		).text();
-		const mergerContent = await Bun.file(join(mergerPath, ".claude", "settings.local.json")).text();
+		const builderContent = await Bun.file(join(builderPath, ".opencode", "settings.json")).text();
+		const mergerContent = await Bun.file(join(mergerPath, ".opencode", "settings.json")).text();
 
 		const builderPreToolUse = JSON.parse(builderContent).hooks.PreToolUse;
 		const mergerPreToolUse = JSON.parse(mergerContent).hooks.PreToolUse;
@@ -1116,7 +1110,7 @@ describe("structural enforcement integration", () => {
 			const wt = join(tempDir, `${cap}-wt`);
 			await deployHooks(wt, `${cap}-agent`, cap);
 
-			const content = await Bun.file(join(wt, ".claude", "settings.local.json")).text();
+			const content = await Bun.file(join(wt, ".opencode", "settings.json")).text();
 			expect(() => JSON.parse(content)).not.toThrow();
 		}
 	});
@@ -1126,7 +1120,7 @@ describe("structural enforcement integration", () => {
 
 		await deployHooks(worktreePath, "coordinator-agent", "coordinator");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse;
@@ -1146,7 +1140,7 @@ describe("structural enforcement integration", () => {
 
 		await deployHooks(worktreePath, "scout-git", "scout");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse;
@@ -1168,8 +1162,8 @@ describe("structural enforcement integration", () => {
 		await deployHooks(coordPath, "coord-1", "coordinator");
 		await deployHooks(supPath, "sup-1", "supervisor");
 
-		const coordContent = await Bun.file(join(coordPath, ".claude", "settings.local.json")).text();
-		const supContent = await Bun.file(join(supPath, ".claude", "settings.local.json")).text();
+		const coordContent = await Bun.file(join(coordPath, ".opencode", "settings.json")).text();
+		const supContent = await Bun.file(join(supPath, ".opencode", "settings.json")).text();
 
 		const coordPreToolUse = JSON.parse(coordContent).hooks.PreToolUse;
 		const supPreToolUse = JSON.parse(supContent).hooks.PreToolUse;
@@ -1188,7 +1182,7 @@ describe("structural enforcement integration", () => {
 
 		await deployHooks(worktreePath, "env-guard-agent", "builder");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 
@@ -1225,7 +1219,7 @@ describe("structural enforcement integration", () => {
 
 		await deployHooks(worktreePath, "coordinator-env", "coordinator");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse as Array<{
@@ -1270,7 +1264,7 @@ describe("structural enforcement integration", () => {
 			const wt = join(tempDir, `${cap}-task-wt`);
 			await deployHooks(wt, `${cap}-agent`, cap);
 
-			const content = await Bun.file(join(wt, ".claude", "settings.local.json")).text();
+			const content = await Bun.file(join(wt, ".opencode", "settings.json")).text();
 			const parsed = JSON.parse(content);
 			const preToolUse = parsed.hooks.PreToolUse;
 
@@ -1295,7 +1289,7 @@ describe("structural enforcement integration", () => {
 			const wt = join(tempDir, `${cap}-path-wt`);
 			await deployHooks(wt, `${cap}-agent`, cap);
 
-			const content = await Bun.file(join(wt, ".claude", "settings.local.json")).text();
+			const content = await Bun.file(join(wt, ".opencode", "settings.json")).text();
 			const parsed = JSON.parse(content);
 			const preToolUse = parsed.hooks.PreToolUse;
 
@@ -1325,7 +1319,7 @@ describe("structural enforcement integration", () => {
 
 		await deployHooks(worktreePath, "order-path-agent", "builder");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse;
@@ -1590,7 +1584,7 @@ describe("bash path boundary integration", () => {
 
 		await deployHooks(worktreePath, "builder-bp", "builder");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse;
@@ -1612,7 +1606,7 @@ describe("bash path boundary integration", () => {
 
 		await deployHooks(worktreePath, "merger-bp", "merger");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse;
@@ -1631,7 +1625,7 @@ describe("bash path boundary integration", () => {
 
 		await deployHooks(worktreePath, "scout-bp", "scout");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse;
@@ -1651,7 +1645,7 @@ describe("bash path boundary integration", () => {
 
 		await deployHooks(worktreePath, "reviewer-bp", "reviewer");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse;
@@ -1668,7 +1662,7 @@ describe("bash path boundary integration", () => {
 
 		await deployHooks(worktreePath, "lead-bp", "lead");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse;
@@ -1685,7 +1679,7 @@ describe("bash path boundary integration", () => {
 
 		await deployHooks(worktreePath, "builder-order", "builder");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse;
@@ -1714,7 +1708,7 @@ describe("bash path boundary integration", () => {
 
 		await deployHooks(worktreePath, "default-bp");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse;
@@ -1731,7 +1725,7 @@ describe("bash path boundary integration", () => {
 
 		await deployHooks(worktreePath, "universal-push-agent", "builder");
 
-		const outputPath = join(worktreePath, ".claude", "settings.local.json");
+		const outputPath = join(worktreePath, ".opencode", "settings.json");
 		const content = await Bun.file(outputPath).text();
 		const parsed = JSON.parse(content);
 		const preToolUse = parsed.hooks.PreToolUse;

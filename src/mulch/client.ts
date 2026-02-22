@@ -54,7 +54,10 @@ export interface MulchClient {
 	query(domain?: string): Promise<string>;
 
 	/** Search records across all domains. */
-	search(query: string, options?: { file?: string; sortByScore?: boolean }): Promise<string>;
+	search(
+		query: string,
+		options?: { domain?: string; type?: string; tag?: string },
+	): Promise<string>;
 
 	/** Show expertise record changes since a git ref. */
 	diff(options?: { since?: string }): Promise<MulchDiffResult>;
@@ -209,8 +212,9 @@ export function createMulchClient(cwd: string): MulchClient {
 
 		async search(query, options) {
 			const args = ["search", query];
-			if (options?.file) args.push("--file", options.file);
-			if (options?.sortByScore) args.push("--sort-by-score");
+			if (options?.domain) args.push("--domain", options.domain);
+			if (options?.type) args.push("--type", options.type);
+			if (options?.tag) args.push("--tag", options.tag);
 			const { stdout } = await runMulch(args, "search");
 			return stdout;
 		},

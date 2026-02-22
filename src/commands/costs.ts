@@ -11,6 +11,7 @@ import { loadConfig } from "../config.ts";
 import { ValidationError } from "../errors.ts";
 import { color } from "../logging/color.ts";
 import { createMetricsStore } from "../metrics/store.ts";
+import { estimateCost, parseTranscriptUsage } from "../metrics/transcript.ts";
 import { type AutoPlatformType, createPlatform } from "../platform/factory.ts";
 import { openSessionStore } from "../sessions/compat.ts";
 import type { SessionMetrics } from "../types.ts";
@@ -68,7 +69,11 @@ async function discoverOrchestratorTranscript(
 	platformType: string,
 ): Promise<string | null> {
 	const platform = await createPlatform(platformType as AutoPlatformType);
-	const discovery = await platform.metrics.discoverOrchestratorTranscript?.(projectRoot);
+	// Cast to access platform-specific method that may not be in interface
+	const metrics = platform.metrics as unknown as {
+		discoverOrchestratorTranscript?: (projectRoot: string) => Promise<{ path: string } | null>;
+	};
+	const discovery = await metrics.discoverOrchestratorTranscript?.(projectRoot);
 	return discovery?.path ?? null;
 }
 
@@ -265,15 +270,17 @@ export async function costsCommand(args: string[]): Promise<void> {
 			config.platform.type,
 		);
 		if (!transcriptPath) {
+			const platformPath =
+				config.platform.type === "opencode"
+					? "~/.config/opencode/sessions/*.jsonl"
+					: "~/.claude/projects/{project-key}/*.jsonl";
 			if (json) {
 				process.stdout.write(
 					JSON.stringify({ error: "no_transcript", message: "No orchestrator transcript found" }) +
 						"\n",
 				);
 			} else {
-				process.stdout.write(
-					"No orchestrator transcript found.\nExpected at: ~/.claude/projects/{project-key}/*.jsonl\n",
-				);
+				process.stdout.write(`No orchestrator transcript found.\nExpected at: ${platformPath}\n`);
 			}
 			return;
 		}

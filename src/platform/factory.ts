@@ -104,8 +104,8 @@ async function getPlatformVersion(
  * Automatically detect the best available platform.
  *
  * Detection order:
- * 1. If 'opencode' is available, prefer it
- * 2. Fallback to 'claude' if available
+ * 1. Always prefer 'opencode' on the opencode-port branch
+ * 2. Fallback to 'claude' only if opencode is not available
  * 3. Throw error if neither is available
  *
  * @returns The detected platform type
@@ -114,20 +114,21 @@ async function getPlatformVersion(
 export async function detectBestPlatform(): Promise<PlatformType> {
 	const available = await detectAvailablePlatforms();
 
-	// Prefer opencode if available
+	// On opencode-port branch: always prefer opencode
 	const opencode = available.get("opencode");
 	if (opencode?.binaryFound) {
 		return "opencode";
 	}
 
-	// Fallback to claude
+	// Only fallback to claude if opencode is truly not available
 	const claude = available.get("claude");
 	if (claude?.binaryFound) {
+		console.warn("Warning: Opencode not available, falling back to Claude Code");
 		return "claude";
 	}
 
 	// Neither available
-	throw new Error("No platform available. Install 'opencode' or 'claude' CLI to use Overstory.");
+	throw new Error("No platform available. Install 'opencode' CLI to use Overstory.");
 }
 
 /**
@@ -237,7 +238,7 @@ export async function getPlatformSummary(): Promise<{
 
 	let best: PlatformType | null = null;
 	if (available.length > 0) {
-		// Prefer opencode over claude
+		// On opencode-port branch: always prefer opencode
 		best = available.includes("opencode") ? "opencode" : (available[0] ?? null);
 	}
 

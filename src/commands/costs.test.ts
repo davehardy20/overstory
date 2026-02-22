@@ -61,7 +61,7 @@ describe("costsCommand", () => {
 		const overstoryDir = join(tempDir, ".overstory");
 		await Bun.write(
 			join(overstoryDir, "config.yaml"),
-			`project:\n  name: test\n  root: ${tempDir}\n  canonicalBranch: main\n`,
+			`project:\n  name: test\n  root: ${tempDir}\n  canonicalBranch: main\nplatform:\n  type: opencode\n`,
 		);
 
 		// Change to temp dir so loadConfig() works
@@ -1041,14 +1041,10 @@ describe("costsCommand", () => {
 		});
 
 		test("--self shows orchestrator cost when transcript exists", async () => {
-			// Use process.cwd() to get the symlink-resolved path (on macOS /var -> /private/var).
-			// config.project.root comes from resolveProjectRoot which uses process.cwd() internally,
-			// so we must match that for the project key.
-			const resolvedRoot = process.cwd();
-			const projectKey = resolvedRoot.replace(/\//g, "-");
-			const projectDir = join(tempHome, ".claude", "projects", projectKey);
-			await mkdir(projectDir, { recursive: true });
-			await Bun.write(join(projectDir, "session-abc123.jsonl"), makeTranscriptContent());
+			// Opencode stores transcripts in ~/.config/opencode/sessions/{agent}/{session}.jsonl
+			const sessionsDir = join(tempHome, ".config", "opencode", "sessions", "coordinator");
+			await mkdir(sessionsDir, { recursive: true });
+			await Bun.write(join(sessionsDir, "session-abc123.jsonl"), makeTranscriptContent());
 
 			process.env.HOME = tempHome;
 
@@ -1065,12 +1061,10 @@ describe("costsCommand", () => {
 		});
 
 		test("--self --json outputs JSON with expected fields", async () => {
-			// Use process.cwd() to match the symlink-resolved root used by config
-			const resolvedRoot = process.cwd();
-			const projectKey = resolvedRoot.replace(/\//g, "-");
-			const projectDir = join(tempHome, ".claude", "projects", projectKey);
-			await mkdir(projectDir, { recursive: true });
-			await Bun.write(join(projectDir, "session-abc123.jsonl"), makeTranscriptContent());
+			// Opencode stores transcripts in ~/.config/opencode/sessions/{agent}/{session}.jsonl
+			const sessionsDir = join(tempHome, ".config", "opencode", "sessions", "coordinator");
+			await mkdir(sessionsDir, { recursive: true });
+			await Bun.write(join(sessionsDir, "session-abc123.jsonl"), makeTranscriptContent());
 
 			process.env.HOME = tempHome;
 
