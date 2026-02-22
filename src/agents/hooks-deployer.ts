@@ -2,6 +2,7 @@ import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { AgentError } from "../errors.ts";
 
+import { createPlatform } from "../platform/factory.ts";
 /**
  * Capabilities that must never modify project files.
  * Includes read-only roles (scout, reviewer) and coordination roles (lead).

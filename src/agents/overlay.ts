@@ -2,6 +2,8 @@ import { mkdir } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { AgentError } from "../errors.ts";
 import type { OverlayConfig } from "../types.ts";
+import { createPlatform } from "../platform/factory.ts";
+import { loadConfig } from "../config.ts";
 
 /**
  * Resolve the path to the overlay template file.
