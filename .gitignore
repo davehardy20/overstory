@@ -5,6 +5,8 @@ bun.lockb
 # Build output
 dist/
 *.tsbuildinfo
+*.bun-build
+.bun-build
 
 # OS files
 .DS_Store
