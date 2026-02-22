@@ -1,5 +1,5 @@
 /**
- * Tests for Claude Code transcript JSONL parser.
+ * Tests for dual-format transcript JSONL parser (Claude + Opencode).
  *
  * Uses temp files with real-format JSONL data. No mocks.
  * Philosophy: "never mock what you can use for real" (mx-252b16).
@@ -10,7 +10,13 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { cleanupTempDir } from "../test-helpers.ts";
-import { estimateCost, parseTranscriptUsage } from "./transcript.ts";
+import {
+	detectEntryFormat,
+	detectTranscriptFormat,
+	estimateCost,
+	parseTranscriptUsage,
+	type TranscriptFormat,
+} from "./transcript.ts";
 
 let tempDir: string;
 
@@ -30,9 +36,105 @@ async function writeJsonl(filename: string, lines: unknown[]): Promise<string> {
 	return path;
 }
 
-// === parseTranscriptUsage ===
+// === detectEntryFormat ===
 
-describe("parseTranscriptUsage", () => {
+describe("detectEntryFormat", () => {
+	test("detects Claude format entry", () => {
+		const entry = {
+			type: "assistant",
+			message: {
+				model: "claude-opus-4-6",
+				usage: { input_tokens: 100, output_tokens: 50 },
+			},
+		};
+		expect(detectEntryFormat(entry)).toBe("claude");
+	});
+
+	test("detects Opencode format entry", () => {
+		const entry = { input: 100, output: 50, model: "claude-sonnet-4-20250514" };
+		expect(detectEntryFormat(entry)).toBe("opencode");
+	});
+
+	test("detects Opencode format with only input field", () => {
+		const entry = { input: 100, model: "claude-sonnet-4-20250514" };
+		expect(detectEntryFormat(entry)).toBe("opencode");
+	});
+
+	test("detects Opencode format with only output field", () => {
+		const entry = { output: 50, model: "claude-sonnet-4-20250514" };
+		expect(detectEntryFormat(entry)).toBe("opencode");
+	});
+
+	test("returns unknown for non-matching entry", () => {
+		const entry = { type: "human", message: { content: "hello" } };
+		expect(detectEntryFormat(entry)).toBe("unknown");
+	});
+
+	test("returns unknown for null", () => {
+		expect(detectEntryFormat(null)).toBe("unknown");
+	});
+
+	test("returns unknown for primitive", () => {
+		expect(detectEntryFormat("string")).toBe("unknown");
+		expect(detectEntryFormat(123)).toBe("unknown");
+	});
+});
+
+// === detectTranscriptFormat ===
+
+describe("detectTranscriptFormat", () => {
+	test("detects Claude format file", async () => {
+		const path = await writeJsonl("claude.jsonl", [
+			{
+				type: "assistant",
+				message: { model: "claude-opus-4-6", usage: { input_tokens: 100, output_tokens: 50 } },
+			},
+			{ type: "human", message: { content: "hello" } },
+			{
+				type: "assistant",
+				message: { model: "claude-opus-4-6", usage: { input_tokens: 200, output_tokens: 75 } },
+			},
+		]);
+		expect(await detectTranscriptFormat(path)).toBe("claude");
+	});
+
+	test("detects Opencode format file", async () => {
+		const path = await writeJsonl("opencode.jsonl", [
+			{ input: 100, output: 50, model: "claude-sonnet-4-20250514" },
+			{ input: 200, output: 75, model: "claude-sonnet-4-20250514" },
+		]);
+		expect(await detectTranscriptFormat(path)).toBe("opencode");
+	});
+
+	test("returns unknown for empty file", async () => {
+		const path = join(tempDir, "empty.jsonl");
+		await Bun.write(path, "");
+		expect(await detectTranscriptFormat(path)).toBe("unknown");
+	});
+
+	test("returns unknown for file with no recognizable entries", async () => {
+		const path = await writeJsonl("unknown.jsonl", [
+			{ type: "human", message: { content: "hello" } },
+			{ type: "system", content: "system prompt" },
+		]);
+		expect(await detectTranscriptFormat(path)).toBe("unknown");
+	});
+
+	test("prefers Claude on tie", async () => {
+		const path = await writeJsonl("tie.jsonl", [
+			{
+				type: "assistant",
+				message: { model: "claude-opus-4-6", usage: { input_tokens: 100, output_tokens: 50 } },
+			},
+			{ input: 100, output: 50, model: "claude-sonnet-4-20250514" },
+		]);
+		expect(await detectTranscriptFormat(path)).toBe("claude");
+	});
+});
+
+// === parseTranscriptUsage (Claude format) ===
+
+describe("parseTranscriptUsage - Claude format", () => {
 	test("parses a single assistant entry with all usage fields", async () => {
 		const path = await writeJsonl("single.jsonl", [
 			{
@@ -162,7 +264,6 @@ describe("parseTranscriptUsage", () => {
 
 		const usage = await parseTranscriptUsage(path);
 
-		// Should parse the two valid assistant entries, skip the malformed line
 		expect(usage.inputTokens).toBe(300);
 		expect(usage.outputTokens).toBe(125);
 	});
@@ -176,7 +277,6 @@ describe("parseTranscriptUsage", () => {
 					usage: {
 						input_tokens: 100,
 						output_tokens: 50,
-						// No cache fields
 					},
 				},
 			},
@@ -257,6 +357,146 @@ describe("parseTranscriptUsage", () => {
 	});
 });
 
+// === parseTranscriptUsage (Opencode format) ===
+
+describe("parseTranscriptUsage - Opencode format", () => {
+	test("parses a single Opencode entry with all usage fields", async () => {
+		const path = await writeJsonl("opencode-single.jsonl", [
+			{
+				input: 100,
+				output: 50,
+				cacheRead: 1000,
+				cacheCreation: 500,
+				model: "claude-sonnet-4-20250514",
+			},
+		]);
+
+		const usage = await parseTranscriptUsage(path);
+
+		expect(usage.inputTokens).toBe(100);
+		expect(usage.outputTokens).toBe(50);
+		expect(usage.cacheReadTokens).toBe(1000);
+		expect(usage.cacheCreationTokens).toBe(500);
+		expect(usage.modelUsed).toBe("claude-sonnet-4-20250514");
+	});
+
+	test("aggregates usage across multiple Opencode entries", async () => {
+		const path = await writeJsonl("opencode-multi.jsonl", [
+			{
+				input: 100,
+				output: 50,
+				cacheRead: 1000,
+				cacheCreation: 500,
+				model: "claude-sonnet-4-20250514",
+			},
+			{
+				input: 200,
+				output: 75,
+				cacheRead: 2000,
+				cacheCreation: 0,
+				model: "claude-sonnet-4-20250514",
+			},
+			{
+				input: 300,
+				output: 100,
+				cacheRead: 3000,
+				cacheCreation: 250,
+				model: "claude-sonnet-4-20250514",
+			},
+		]);
+
+		const usage = await parseTranscriptUsage(path);
+
+		expect(usage.inputTokens).toBe(600);
+		expect(usage.outputTokens).toBe(225);
+		expect(usage.cacheReadTokens).toBe(6000);
+		expect(usage.cacheCreationTokens).toBe(750);
+	});
+
+	test("handles Opencode entries with missing cache fields", async () => {
+		const path = await writeJsonl("opencode-partial.jsonl", [
+			{ input: 100, output: 50, model: "claude-sonnet-4-20250514" },
+		]);
+
+		const usage = await parseTranscriptUsage(path);
+
+		expect(usage.inputTokens).toBe(100);
+		expect(usage.outputTokens).toBe(50);
+		expect(usage.cacheReadTokens).toBe(0);
+		expect(usage.cacheCreationTokens).toBe(0);
+	});
+
+	test("handles Opencode entries with only input field", async () => {
+		const path = await writeJsonl("opencode-input-only.jsonl", [
+			{ input: 100, model: "claude-sonnet-4-20250514" },
+		]);
+
+		const usage = await parseTranscriptUsage(path);
+
+		expect(usage.inputTokens).toBe(100);
+		expect(usage.outputTokens).toBe(0);
+	});
+
+	test("handles Opencode entries with only output field", async () => {
+		const path = await writeJsonl("opencode-output-only.jsonl", [
+			{ output: 50, model: "claude-sonnet-4-20250514" },
+		]);
+
+		const usage = await parseTranscriptUsage(path);
+
+		expect(usage.inputTokens).toBe(0);
+		expect(usage.outputTokens).toBe(50);
+	});
+
+	test("captures model from first Opencode entry", async () => {
+		const path = await writeJsonl("opencode-model.jsonl", [
+			{ input: 100, output: 50, model: "claude-sonnet-4-20250514" },
+			{ input: 200, output: 75, model: "claude-opus-4-6" },
+		]);
+
+		const usage = await parseTranscriptUsage(path);
+
+		expect(usage.modelUsed).toBe("claude-sonnet-4-20250514");
+	});
+
+	test("handles Opencode entries without model field", async () => {
+		const path = await writeJsonl("opencode-no-model.jsonl", [
+			{ input: 100, output: 50, cacheRead: 1000 },
+		]);
+
+		const usage = await parseTranscriptUsage(path);
+
+		expect(usage.inputTokens).toBe(100);
+		expect(usage.outputTokens).toBe(50);
+		expect(usage.cacheReadTokens).toBe(1000);
+		expect(usage.modelUsed).toBeNull();
+	});
+});
+
+// === parseTranscriptUsage (mixed format) ===
+
+describe("parseTranscriptUsage - mixed format support", () => {
+	test("parses file with both Claude and Opencode entries", async () => {
+		const path = await writeJsonl("mixed-format.jsonl", [
+			{
+				type: "assistant",
+				message: { model: "claude-opus-4-6", usage: { input_tokens: 100, output_tokens: 50 } },
+			},
+			{ input: 200, output: 75, model: "claude-sonnet-4-20250514" },
+			{
+				type: "assistant",
+				message: { model: "claude-opus-4-6", usage: { input_tokens: 150, output_tokens: 60 } },
+			},
+		]);
+
+		const usage = await parseTranscriptUsage(path);
+
+		expect(usage.inputTokens).toBe(450); // 100 + 200 + 150
+		expect(usage.outputTokens).toBe(185); // 50 + 75 + 60
+		expect(usage.modelUsed).toBe("claude-opus-4-6"); // First entry
+	});
+});
+
 // === estimateCost ===
 
 describe("estimateCost", () => {
@@ -269,7 +509,6 @@ describe("estimateCost", () => {
 			modelUsed: "claude-opus-4-6",
 		});
 
-		// opus: input=$15, output=$75, cacheRead=$1.50, cacheCreation=$3.75
 		expect(cost).toBeCloseTo(95.25, 2);
 	});
 
@@ -282,7 +521,6 @@ describe("estimateCost", () => {
 			modelUsed: "claude-sonnet-4-20250514",
 		});
 
-		// sonnet: input=$3, output=$15, cacheRead=$0.30, cacheCreation=$0.75
 		expect(cost).toBeCloseTo(19.05, 2);
 	});
 
@@ -295,7 +533,6 @@ describe("estimateCost", () => {
 			modelUsed: "claude-haiku-3-5-20241022",
 		});
 
-		// haiku: input=$0.80, output=$4, cacheRead=$0.08, cacheCreation=$0.20
 		expect(cost).toBeCloseTo(5.08, 2);
 	});
 
@@ -336,7 +573,6 @@ describe("estimateCost", () => {
 	});
 
 	test("realistic session cost calculation", () => {
-		// A typical agent session: ~20K input, ~5K output, heavy cache reads
 		const cost = estimateCost({
 			inputTokens: 20_000,
 			outputTokens: 5_000,
@@ -345,8 +581,6 @@ describe("estimateCost", () => {
 			modelUsed: "claude-sonnet-4-20250514",
 		});
 
-		// sonnet: (20K/1M)*3 + (5K/1M)*15 + (100K/1M)*0.30 + (15K/1M)*0.75
-		// = 0.06 + 0.075 + 0.03 + 0.01125 = $0.17625
 		expect(cost).not.toBeNull();
 		if (cost !== null) {
 			expect(cost).toBeGreaterThan(0.1);

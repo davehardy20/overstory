@@ -31,6 +31,7 @@ import type {
 	TranscriptDiscovery,
 } from "../interface.ts";
 import { getDefaultConfigDir, getDefaultSessionDir } from "../utils.ts";
+import { createOpencodeMetrics, OpencodeMetrics } from "./metrics.ts";
 
 // === Hooks Implementation ===
 
@@ -464,177 +465,6 @@ class OpencodeSpawner implements IPlatformSpawner {
 	}
 }
 
-// === Metrics Implementation ===
-
-/**
- * Opencode platform metrics and transcript implementation.
- *
- * Handles transcript discovery and parsing from ~/.config/opencode/sessions/.
- */
-class OpencodeMetrics implements IPlatformMetrics {
-	getTranscriptsDir(): string {
-		return getDefaultSessionDir("opencode");
-	}
-
-	async discoverTranscripts(options?: {
-		agentName?: string;
-		since?: string;
-		limit?: number;
-	}): Promise<TranscriptDiscovery[]> {
-		const transcriptsDir = this.getTranscriptsDir();
-
-		if (!existsSync(transcriptsDir)) {
-			return [];
-		}
-
-		const results: TranscriptDiscovery[] = [];
-		const limit = options?.limit ?? 100;
-
-		// Use glob to find transcript files
-		const glob = new Bun.Glob("**/*.jsonl");
-		const files = [...glob.scanSync({ cwd: transcriptsDir })];
-
-		for (const file of files) {
-			if (results.length >= limit) break;
-
-			const fullPath = join(transcriptsDir, file);
-			const stat = await Bun.file(fullPath).stat();
-
-			if (stat === null) continue;
-
-			// Extract agent name from path
-			const pathParts = file.split("/");
-			const agentName = pathParts[0] ?? "unknown";
-
-			if (options?.agentName !== undefined && agentName !== options.agentName) {
-				continue;
-			}
-
-			const timestamp = stat.mtime.toISOString();
-
-			if (options?.since !== undefined && timestamp < options.since) {
-				continue;
-			}
-
-			results.push({
-				path: fullPath,
-				agentName,
-				sessionId: pathParts[1]?.replace(".jsonl", "") ?? null,
-				timestamp,
-				sizeBytes: stat.size,
-			});
-		}
-
-		// Sort by timestamp descending
-		results.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-
-		return results.slice(0, limit);
-	}
-
-	async parseTranscript(path: string): Promise<ParsedTranscript> {
-		const file = Bun.file(path);
-		const content = await file.text();
-		const lines = content.trim().split("\n");
-
-		const meta = {
-			path,
-			agentName: "unknown",
-			sessionId: null as string | null,
-			timestamp: new Date().toISOString(),
-		};
-
-		let input = 0;
-		let output = 0;
-		let cacheRead = 0;
-		let cacheCreation = 0;
-		let modelUsed: string | null = null;
-		const toolStats: Map<string, { count: number; totalDurationMs: number }> = new Map();
-
-		for (const line of lines) {
-			try {
-				const entry = JSON.parse(line) as Record<string, unknown>;
-
-				// Extract token usage
-				if (typeof entry.input === "number") input += entry.input;
-				if (typeof entry.output === "number") output += entry.output;
-				if (typeof entry.cacheRead === "number") cacheRead += entry.cacheRead;
-				if (typeof entry.cacheCreation === "number") cacheCreation += entry.cacheCreation;
-				if (typeof entry.model === "string" && modelUsed === null) modelUsed = entry.model;
-
-				// Extract tool stats
-				if (entry.tool !== null && typeof entry.tool === "object") {
-					const tool = entry.tool as Record<string, unknown>;
-					const toolName = typeof tool.name === "string" ? tool.name : "unknown";
-					const existing = toolStats.get(toolName) ?? { count: 0, totalDurationMs: 0 };
-					existing.count++;
-					if (typeof tool.durationMs === "number") {
-						existing.totalDurationMs += tool.durationMs;
-					}
-					toolStats.set(toolName, existing);
-				}
-			} catch {
-				// Skip malformed lines
-			}
-		}
-
-		const tokens = { input, output, cacheRead, cacheCreation };
-
-		return {
-			meta,
-			tokens,
-			estimatedCostUsd: this.calculateCost(tokens, modelUsed ?? "unknown"),
-			modelUsed,
-			toolStats: Array.from(toolStats.entries()).map(([name, stats]) => ({
-				name,
-				count: stats.count,
-				totalDurationMs: stats.totalDurationMs,
-			})),
-		};
-	}
-
-	extractTokens(parsed: ParsedTranscript): {
-		input: number;
-		output: number;
-		cacheRead: number;
-		cacheCreation: number;
-	} {
-		return parsed.tokens;
-	}
-
-	calculateCost(
-		tokens: { input: number; output: number; cacheRead: number; cacheCreation: number },
-		model: string,
-	): number | null {
-		const pricing = this.getModelPricing().get(model);
-		if (pricing === undefined) return null;
-
-		const inputCost = (tokens.input / 1_000_000) * pricing.inputPerMillion;
-		const outputCost = (tokens.output / 1_000_000) * pricing.outputPerMillion;
-		const cacheReadCost =
-			pricing.cacheReadPerMillion !== undefined
-				? (tokens.cacheRead / 1_000_000) * pricing.cacheReadPerMillion
-				: 0;
-
-		return inputCost + outputCost + cacheReadCost;
-	}
-
-	getModelPricing(): Map<
-		string,
-		{ inputPerMillion: number; outputPerMillion: number; cacheReadPerMillion?: number }
-	> {
-		return new Map([
-			[
-				"claude-sonnet-4-20250514",
-				{ inputPerMillion: 3, outputPerMillion: 15, cacheReadPerMillion: 0.3 },
-			],
-			["claude-3-5-sonnet-20241022", { inputPerMillion: 3, outputPerMillion: 15 }],
-			["claude-3-opus-20240229", { inputPerMillion: 15, outputPerMillion: 75 }],
-			["gpt-4o", { inputPerMillion: 2.5, outputPerMillion: 10 }],
-			["gpt-4-turbo", { inputPerMillion: 10, outputPerMillion: 30 }],
-		]);
-	}
-}
-
 // === AI Implementation ===
 
 /**
@@ -779,10 +609,6 @@ function createOpencodeContext(): IPlatformContext {
 
 function createOpencodeSpawner(): IPlatformSpawner {
 	return new OpencodeSpawner();
-}
-
-function createOpencodeMetrics(): IPlatformMetrics {
-	return new OpencodeMetrics();
 }
 
 function createOpencodeAI(): IPlatformAI {

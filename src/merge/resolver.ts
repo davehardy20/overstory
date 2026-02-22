@@ -4,7 +4,7 @@
  * Implements a 4-tier escalation strategy:
  *   1. Clean merge — git merge with no conflicts
  *   2. Auto-resolve — parse conflict markers, keep incoming (agent) changes
- *   3. AI-resolve — use Claude to resolve remaining conflicts
+ *   3. AI-resolve — use platform AI to resolve remaining conflicts
  *   4. Re-imagine — abort merge and reimplement changes from scratch
  *
  * Each tier is attempted in order. If a tier fails, the next is tried.
@@ -13,6 +13,7 @@
 
 import { MergeError } from "../errors.ts";
 import type { MulchClient } from "../mulch/client.ts";
+import type { IPlatformAI } from "../platform/interface.ts";
 import type {
 	ConflictHistory,
 	MergeEntry,
@@ -191,13 +192,14 @@ export function looksLikeProse(text: string): boolean {
 }
 
 /**
- * Tier 3: AI-assisted conflict resolution using Claude.
- * Spawns `claude --print` for each conflicted file with the conflict content.
+ * Tier 3: AI-assisted conflict resolution using platform AI.
+ * Uses platform.call() for each conflicted file with the conflict content.
  * Validates that output looks like code, not conversational prose.
  */
 async function tryAiResolve(
 	conflictFiles: string[],
 	repoRoot: string,
+	platformAI: IPlatformAI,
 	pastResolutions?: string[],
 ): Promise<{ success: boolean; remainingConflicts: string[] }> {
 	const remainingConflicts: string[] = [];
@@ -211,29 +213,19 @@ async function tryAiResolve(
 				pastResolutions && pastResolutions.length > 0
 					? `\n\nHistorical context from past merges:\n${pastResolutions.join("\n")}\n`
 					: "";
-			const prompt = [
-				"You are a merge conflict resolver. Output ONLY the resolved file content.",
-				"Rules: NO explanation, NO markdown fencing, NO conversation, NO preamble.",
-				"Output the raw file content as it should appear on disk.",
-				"Choose the best combination of both sides of this conflict:",
-				historyContext,
-				"\n\n",
-				content,
-			].join(" ");
 
-			const proc = Bun.spawn(["claude", "--print", "-p", prompt], {
-				cwd: repoRoot,
-				stdout: "pipe",
-				stderr: "pipe",
+			const systemPrompt =
+				"You are a merge conflict resolver. Output ONLY the resolved file content. Rules: NO explanation, NO markdown fencing, NO conversation, NO preamble. Output the raw file content as it should appear on disk.";
+			const userPrompt = `Choose the best combination of both sides of this conflict:${historyContext}\n\n${content}`;
+
+			const result = await platformAI.call({
+				systemPrompt,
+				userPrompt,
 			});
 
-			const [resolved, , exitCode] = await Promise.all([
-				new Response(proc.stdout).text(),
-				new Response(proc.stderr).text(),
-				proc.exited,
-			]);
+			const resolved = result.content;
 
-			if (exitCode !== 0 || resolved.trim() === "") {
+			if (resolved.trim() === "") {
 				remainingConflicts.push(file);
 				continue;
 			}
@@ -265,12 +257,13 @@ async function tryAiResolve(
 
 /**
  * Tier 4: Re-imagine — abort the merge and reimplement changes from scratch.
- * Uses Claude to reimplement the agent's changes on top of the canonical version.
+ * Uses platform AI to reimplement the agent's changes on top of the canonical version.
  */
 async function tryReimagine(
 	entry: MergeEntry,
 	canonicalBranch: string,
 	repoRoot: string,
+	platformAI: IPlatformAI,
 ): Promise<{ success: boolean }> {
 	// Abort the current merge
 	await runGit(repoRoot, ["merge", "--abort"]);
@@ -293,30 +286,18 @@ async function tryReimagine(
 				return { success: false };
 			}
 
-			const prompt = [
-				"You are a merge conflict resolver. Output ONLY the final file content.",
-				"Rules: NO explanation, NO markdown fencing, NO conversation, NO preamble.",
-				"Output the raw file content as it should appear on disk.",
-				"Reimplement the changes from the branch version onto the canonical version.",
-				`\n\n=== CANONICAL VERSION (${canonicalBranch}) ===\n`,
-				canonicalContent,
-				`\n\n=== BRANCH VERSION (${entry.branchName}) ===\n`,
-				branchContent,
-			].join("");
+			const systemPrompt =
+				"You are a merge conflict resolver. Output ONLY the final file content. Rules: NO explanation, NO markdown fencing, NO conversation, NO preamble. Output the raw file content as it should appear on disk. Reimplement the changes from the branch version onto the canonical version.";
+			const userPrompt = `\n\n=== CANONICAL VERSION (${canonicalBranch}) ===\n${canonicalContent}\n\n=== BRANCH VERSION (${entry.branchName}) ===\n${branchContent}`;
 
-			const proc = Bun.spawn(["claude", "--print", "-p", prompt], {
-				cwd: repoRoot,
-				stdout: "pipe",
-				stderr: "pipe",
+			const result = await platformAI.call({
+				systemPrompt,
+				userPrompt,
 			});
 
-			const [reimagined, , exitCode] = await Promise.all([
-				new Response(proc.stdout).text(),
-				new Response(proc.stderr).text(),
-				proc.exited,
-			]);
+			const reimagined = result.content;
 
-			if (exitCode !== 0 || reimagined.trim() === "") {
+			if (reimagined.trim() === "") {
 				return { success: false };
 			}
 
@@ -507,11 +488,13 @@ function recordConflictPattern(
  * @param options.aiResolveEnabled - Enable tier 3 (AI-assisted resolution)
  * @param options.reimagineEnabled - Enable tier 4 (full reimagine)
  * @param options.mulchClient - Optional MulchClient for conflict pattern recording
+ * @param options.platformAI - Platform AI instance for merge resolution
  */
 export function createMergeResolver(options: {
 	aiResolveEnabled: boolean;
 	reimagineEnabled: boolean;
 	mulchClient?: MulchClient;
+	platformAI: IPlatformAI;
 }): MergeResolver {
 	return {
 		async resolve(
@@ -588,7 +571,7 @@ export function createMergeResolver(options: {
 			// Tier 3: AI-resolve
 			if (options.aiResolveEnabled && !history.skipTiers.includes("ai-resolve")) {
 				lastTier = "ai-resolve";
-				const aiResult = await tryAiResolve(conflictFiles, repoRoot, history.pastResolutions);
+				const aiResult = await tryAiResolve(conflictFiles, repoRoot, options.platformAI, history.pastResolutions);
 				if (aiResult.success) {
 					if (options.mulchClient) {
 						recordConflictPattern(options.mulchClient, entry, "ai-resolve", conflictFiles, true);
@@ -607,7 +590,7 @@ export function createMergeResolver(options: {
 			// Tier 4: Re-imagine
 			if (options.reimagineEnabled && !history.skipTiers.includes("reimagine")) {
 				lastTier = "reimagine";
-				const reimagineResult = await tryReimagine(entry, canonicalBranch, repoRoot);
+				const reimagineResult = await tryReimagine(entry, canonicalBranch, repoRoot, options.platformAI);
 				if (reimagineResult.success) {
 					if (options.mulchClient) {
 						recordConflictPattern(options.mulchClient, entry, "reimagine", conflictFiles, true);
