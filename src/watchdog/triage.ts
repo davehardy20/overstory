@@ -2,36 +2,42 @@
  * Tier 1 AI-assisted failure classification for stalled agents.
  *
  * When an agent is detected as stalled, triage reads recent log entries and
- * uses Claude to classify the situation as recoverable, fatal, or long-running.
- * Falls back to "extend" if Claude is unavailable.
+ * uses the configured platform (Claude or Opencode) to classify the situation
+ * as recoverable, fatal, or long-running.
+ * Falls back to "extend" if platform AI is unavailable.
  */
 
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { AgentError } from "../errors.ts";
+import type { AutoPlatformType } from "../platform/factory.ts";
+import { createPlatform } from "../platform/factory.ts";
 
 /**
- * Triage a stalled agent by analyzing its recent log output with Claude.
+ * Triage a stalled agent by analyzing its recent log output with AI.
  *
  * Steps:
  * 1. Find the most recent session log directory for the agent
  * 2. Read the last 50 lines of session.log
- * 3. Ask Claude to classify the situation
+ * 3. Ask the configured platform AI to classify the situation
  * 4. Parse the response to determine action
  *
  * @param options.agentName - Name of the agent to triage
  * @param options.root - Project root directory (contains .overstory/)
  * @param options.lastActivity - ISO timestamp of the agent's last recorded activity
+ * @param options.platformType - Platform to use (defaults to 'auto')
  * @returns "retry" if recoverable, "terminate" if fatal, "extend" if likely long-running
  */
 export async function triageAgent(options: {
 	agentName: string;
 	root: string;
 	lastActivity: string;
-	/** Timeout in ms for the Claude subprocess. Defaults to 30_000 (30s). */
+	/** Timeout in ms for the AI call. Defaults to 30_000 (30s). */
 	timeoutMs?: number;
+	/** Platform type to use for AI calls. Defaults to 'auto'. */
+	platformType?: AutoPlatformType;
 }): Promise<"retry" | "terminate" | "extend"> {
-	const { agentName, root, lastActivity, timeoutMs } = options;
+	const { agentName, root, lastActivity, platformType = "auto" } = options;
 	const logsDir = join(root, ".overstory", "logs", agentName);
 
 	let logContent: string;
@@ -45,10 +51,19 @@ export async function triageAgent(options: {
 	const prompt = buildTriagePrompt(agentName, lastActivity, logContent);
 
 	try {
-		const response = await spawnClaude(prompt, timeoutMs);
-		return classifyResponse(response);
+		const platform = await createPlatform(platformType);
+		if (!platform.ai) {
+			// Platform doesn't support AI calls — default to extend
+			return "extend";
+		}
+
+		const result = await platform.ai.call({
+			userPrompt: prompt,
+			maxTokens: 100, // Short response expected
+		});
+		return classifyResponse(result.content);
 	} catch {
-		// Claude not available — default to extend (safe fallback)
+		// Platform AI not available or call failed — default to extend (safe fallback)
 		return "extend";
 	}
 }
@@ -96,7 +111,7 @@ async function readRecentLog(logsDir: string): Promise<string> {
 }
 
 /**
- * Build the triage prompt for Claude analysis.
+ * Build the triage prompt for AI analysis.
  */
 export function buildTriagePrompt(
 	agentName: string,
@@ -119,10 +134,13 @@ export function buildTriagePrompt(
 	].join("\n");
 }
 
-/** Default timeout for Claude subprocess: 30 seconds */
+/** Default timeout for AI calls: 30 seconds */
 const DEFAULT_TRIAGE_TIMEOUT_MS = 30_000;
 
 /**
+ * @deprecated Use platform.ai.call() directly via triageAgent().
+ * This function is kept for backward compatibility but will be removed.
+ *
  * Spawn Claude in non-interactive mode to analyze the log.
  *
  * @param prompt - The analysis prompt
@@ -130,7 +148,7 @@ const DEFAULT_TRIAGE_TIMEOUT_MS = 30_000;
  * @returns Claude's response text
  * @throws Error if claude is not installed, the process fails, or the timeout is reached
  */
-async function spawnClaude(prompt: string, timeoutMs?: number): Promise<string> {
+export async function spawnClaude(prompt: string, timeoutMs?: number): Promise<string> {
 	const timeout = timeoutMs ?? DEFAULT_TRIAGE_TIMEOUT_MS;
 
 	const proc = Bun.spawn(["claude", "--print", "-p", prompt], {
@@ -158,9 +176,9 @@ async function spawnClaude(prompt: string, timeoutMs?: number): Promise<string> 
 }
 
 /**
- * Classify Claude's response into a triage action.
+ * Classify AI's response into a triage action.
  *
- * @param response - Claude's raw response text
+ * @param response - AI's raw response text
  * @returns "retry" | "terminate" | "extend"
  */
 export function classifyResponse(response: string): "retry" | "terminate" | "extend" {

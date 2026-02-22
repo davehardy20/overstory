@@ -1,11 +1,3 @@
-/**
- * Tests for Tier 1 AI-assisted triage.
- * classifyResponse and buildTriagePrompt are pure functions — tested directly.
- * triageAgent uses real filesystem (temp dirs). Claude spawn is expected to
- * fail in test environments, exercising the fallback-to-extend path.
- * spawnClaude is NOT mocked — we rely on it failing naturally in tests.
- */
-
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -55,7 +47,6 @@ describe("classifyResponse", () => {
 	});
 
 	test("first match wins when response has multiple keywords", () => {
-		// 'retry' is checked before 'terminate'
 		const result = classifyResponse("retry this but it may terminate later");
 		expect(result).toBe("retry");
 	});
@@ -78,7 +69,7 @@ describe("buildTriagePrompt", () => {
 		const prompt = buildTriagePrompt("test-agent", "2026-02-13T10:00:00Z", logContent);
 		expect(prompt).toContain("```");
 		expect(prompt).toContain(logContent);
-		expect(prompt.split("```").length).toBeGreaterThanOrEqual(3); // Opening and closing fences
+		expect(prompt.split("```").length).toBeGreaterThanOrEqual(3);
 	});
 
 	test("contains classification instructions (retry/terminate/extend)", () => {
@@ -133,7 +124,7 @@ describe("triageAgent", () => {
 		expect(result).toBe("extend");
 	});
 
-	test("returns 'extend' when session.log exists but claude binary fails", async () => {
+	test("returns 'extend' when session.log exists but platform AI is unavailable", async () => {
 		const timestamp = "2026-02-13T10-00-00";
 		const sessionLogPath = join(
 			tempRoot,
@@ -144,20 +135,15 @@ describe("triageAgent", () => {
 			"session.log",
 		);
 
-		// Create session.log with some content
 		await Bun.write(
 			sessionLogPath,
 			"Agent started\nProcessing data\nError: something went wrong\n",
 		);
 
-		// triageAgent will try to spawn claude which should fail or be killed by timeout.
-		// Short timeout ensures the test doesn't hang even if the claude binary
-		// exists on the system (e.g., inside a Claude Code session).
 		const result = await triageAgent({
 			agentName: "test-agent",
 			root: tempRoot,
 			lastActivity: "2026-02-13T10:00:00Z",
-			timeoutMs: 500,
 		});
 		expect(result).toBe("extend");
 	});
