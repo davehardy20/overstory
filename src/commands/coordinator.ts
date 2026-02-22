@@ -19,6 +19,8 @@ import { createIdentity, loadIdentity } from "../agents/identity.ts";
 import { createManifestLoader, resolveModel } from "../agents/manifest.ts";
 import { loadConfig } from "../config.ts";
 import { AgentError, ValidationError } from "../errors.ts";
+import { createPlatform } from "../platform/factory.ts";
+import type { IPlatform, SpawnConfig } from "../platform/interface.ts";
 import { openSessionStore } from "../sessions/compat.ts";
 import { createRunStore } from "../sessions/store.ts";
 import type { AgentSession } from "../types.ts";
@@ -292,6 +294,9 @@ async function startCoordinator(args: string[], deps: CoordinatorDeps = {}): Pro
 
 	const cwd = process.cwd();
 	const config = await loadConfig(cwd);
+
+	// Create platform instance for spawning the coordinator
+	const platform = await createPlatform(config.platform.type);
 	const projectRoot = config.project.root;
 	const watchdog = deps._watchdog ?? createDefaultWatchdog(projectRoot);
 	const monitor = deps._monitor ?? createDefaultMonitor(projectRoot);
@@ -364,10 +369,26 @@ async function startCoordinator(args: string[], deps: CoordinatorDeps = {}): Pro
 			const escaped = agentDef.replace(/'/g, "'\\''");
 			claudeCmd += ` --append-system-prompt '${escaped}'`;
 		}
-		const pid = await tmux.createSession(tmuxSession, projectRoot, claudeCmd, {
-			...env,
-			OVERSTORY_AGENT_NAME: COORDINATOR_NAME,
-		});
+
+		// Build spawn config for platform spawner
+		const spawnConfig: SpawnConfig = {
+			agentName: COORDINATOR_NAME,
+			capability: "coordinator",
+			worktreePath: projectRoot,
+			branchName: config.project.canonicalBranch,
+			beadId: "",
+			parentAgent: null,
+			depth: 0,
+			command: claudeCmd,
+			sessionName: tmuxSession,
+			env: {
+				...env,
+				OVERSTORY_AGENT_NAME: COORDINATOR_NAME,
+			},
+		};
+
+		const result = await platform.spawner.spawn(spawnConfig);
+		const pid = result.pid ?? 99999;
 
 		// Record session BEFORE sending the beacon so that hook-triggered
 		// updateLastActivity() can find the entry and transition booting->working.

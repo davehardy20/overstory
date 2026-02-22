@@ -348,15 +348,17 @@ class OpencodeContext implements IPlatformContext {
  */
 class OpencodeSpawner implements IPlatformSpawner {
 	async spawn(config: SpawnConfig): Promise<SpawnResult> {
-		const sessionId = `opencode-${config.agentName}`;
+		const sessionId = config.sessionName ?? `opencode-${config.agentName}`;
 		const spawnedAt = new Date().toISOString();
+		const command = config.command ?? "opencode";
 
-		// Spawn opencode in a tmux session
-		const args = ["new-session", "-d", "-s", sessionId, "-c", config.worktreePath, "opencode"];
+		// Build tmux args with custom command
+		const args = ["new-session", "-d", "-s", sessionId, "-c", config.worktreePath, command];
 
 		const proc = Bun.spawnSync(["tmux", ...args], {
 			stdout: "pipe",
 			stderr: "pipe",
+			env: config.env ? { ...process.env, ...config.env } : process.env,
 		});
 
 		if (proc.exitCode !== 0) {
@@ -388,6 +390,7 @@ class OpencodeSpawner implements IPlatformSpawner {
 				beadId: config.beadId,
 				parentAgent: config.parentAgent,
 				depth: config.depth,
+				command,
 			},
 		};
 	}

@@ -33,6 +33,7 @@ import { createMulchClient } from "../mulch/client.ts";
 import { openSessionStore } from "../sessions/compat.ts";
 import { createRunStore } from "../sessions/store.ts";
 import type { AgentSession, OverlayConfig } from "../types.ts";
+import { createPlatform } from "../platform/factory.ts";
 import { createWorktree } from "../worktree/manager.ts";
 import { createSession, sendKeys, waitForTuiReady } from "../worktree/tmux.ts";
 
@@ -327,6 +328,9 @@ export async function slingCommand(args: string[]): Promise<void> {
 	const cwd = process.cwd();
 	const config = await loadConfig(cwd);
 
+	// 1b. Create platform instance for agent spawning
+	const platform = await createPlatform(config.platform.type);
+
 	// 2. Validate depth limit
 	// Hierarchy: orchestrator(0) -> lead(1) -> specialist(2)
 	// With maxDepth=2, depth=2 is the deepest allowed leaf, so reject only depth > maxDepth
@@ -554,15 +558,27 @@ export async function slingCommand(args: string[]): Promise<void> {
 			});
 		}
 
-		// 12. Create tmux session running claude in interactive mode
+		// 12. Create tmux session via platform spawner
 		const tmuxSessionName = `overstory-${config.project.name}-${name}`;
 		const { model, env } = resolveModel(config, manifest, capability, agentDef.model);
 		const claudeCmd = `claude --model ${model} --dangerously-skip-permissions`;
-		const pid = await createSession(tmuxSessionName, worktreePath, claudeCmd, {
-			...env,
-			OVERSTORY_AGENT_NAME: name,
-			OVERSTORY_WORKTREE_PATH: worktreePath,
+		const spawnResult = await platform.spawner.spawn({
+			agentName: name,
+			capability,
+			worktreePath,
+			branchName,
+			beadId: taskId,
+			parentAgent,
+			depth,
+			sessionName: tmuxSessionName,
+			command: claudeCmd,
+			env: {
+				...env,
+				OVERSTORY_AGENT_NAME: name,
+				OVERSTORY_WORKTREE_PATH: worktreePath,
+			},
 		});
+		const pid = spawnResult.pid;
 
 		// 13. Record session BEFORE sending the beacon so that hook-triggered
 		// updateLastActivity() can find the entry and transition booting->working.

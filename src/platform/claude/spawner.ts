@@ -8,17 +8,19 @@ import type { IPlatformSpawner, SpawnConfig, SpawnResult } from "../interface.ts
 
 export class ClaudeSpawner implements IPlatformSpawner {
 	async spawn(config: SpawnConfig): Promise<SpawnResult> {
-		const sessionName = config.agentName;
+		const sessionName = config.sessionName ?? config.agentName;
 		const timestamp = new Date().toISOString();
+		const command = config.command ?? "claude";
 
 		try {
-			const proc = Bun.spawnSync(
-				["tmux", "new-session", "-d", "-s", sessionName, "-c", config.worktreePath, "claude"],
-				{
-					stdout: "pipe",
-					stderr: "pipe",
-				},
-			);
+			// Build tmux command args
+			const args = ["new-session", "-d", "-s", sessionName, "-c", config.worktreePath, command];
+
+			const proc = Bun.spawnSync(["tmux", ...args], {
+				stdout: "pipe",
+				stderr: "pipe",
+				env: config.env ? { ...process.env, ...config.env } : process.env,
+			});
 
 			if (proc.exitCode !== 0) {
 				const stderr = new TextDecoder().decode(proc.stderr);
@@ -26,7 +28,7 @@ export class ClaudeSpawner implements IPlatformSpawner {
 			}
 
 			const pidProc = Bun.spawnSync(
-				["tmux", "list-sessions", "-t", sessionName, "-F", "#{session_id}"],
+				["tmux", "list-panes", "-t", sessionName, "-F", "#{pane_pid}"],
 				{
 					stdout: "pipe",
 					stderr: "pipe",
@@ -36,8 +38,9 @@ export class ClaudeSpawner implements IPlatformSpawner {
 			let pid: number | null = null;
 			if (pidProc.exitCode === 0) {
 				const output = new TextDecoder().decode(pidProc.stdout).trim();
-				if (output) {
-					pid = parseInt(output, 10);
+				const pidStr = output.split("\n")[0];
+				if (pidStr !== undefined && pidStr !== "") {
+					pid = parseInt(pidStr, 10);
 					if (isNaN(pid)) {
 						pid = null;
 					}
@@ -52,6 +55,7 @@ export class ClaudeSpawner implements IPlatformSpawner {
 					tmuxSession: sessionName,
 					worktreePath: config.worktreePath,
 					capability: config.capability,
+					command,
 				},
 			};
 		} catch (error) {

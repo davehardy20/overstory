@@ -6,13 +6,12 @@
  * Use --self to parse the current orchestrator session's transcript directly.
  */
 
-import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { loadConfig } from "../config.ts";
 import { ValidationError } from "../errors.ts";
 import { color } from "../logging/color.ts";
 import { createMetricsStore } from "../metrics/store.ts";
-import { estimateCost, parseTranscriptUsage } from "../metrics/transcript.ts";
+import { createPlatform } from "../platform/factory.ts";
 import { openSessionStore } from "../sessions/compat.ts";
 import type { SessionMetrics } from "../types.ts";
 
@@ -57,46 +56,20 @@ function padLeft(str: string, width: number): string {
 /**
  * Discover the orchestrator's Claude Code transcript JSONL file.
  *
- * Scans ~/.claude/projects/{project-key}/ for JSONL files and returns
- * the most recently modified one, corresponding to the current orchestrator session.
+ * Uses platform abstraction to discover transcripts, supporting both Claude Code
+ * and Opencode platforms.
  *
  * @param projectRoot - Absolute path to the project root
+ * @param platformType - Platform type (claude or opencode)
  * @returns Absolute path to the most recent transcript, or null if none found
  */
-async function discoverOrchestratorTranscript(projectRoot: string): Promise<string | null> {
-	const homeDir = process.env.HOME ?? "";
-	if (homeDir.length === 0) return null;
-
-	const projectKey = projectRoot.replace(/\//g, "-");
-	const projectDir = join(homeDir, ".claude", "projects", projectKey);
-
-	let entries: string[];
-	try {
-		entries = await readdir(projectDir);
-	} catch {
-		return null;
-	}
-
-	const jsonlFiles = entries.filter((e) => e.endsWith(".jsonl"));
-	if (jsonlFiles.length === 0) return null;
-
-	let bestPath: string | null = null;
-	let bestMtime = 0;
-
-	for (const file of jsonlFiles) {
-		const filePath = join(projectDir, file);
-		try {
-			const fileStat = await stat(filePath);
-			if (fileStat.mtimeMs > bestMtime) {
-				bestMtime = fileStat.mtimeMs;
-				bestPath = filePath;
-			}
-		} catch {
-			// Skip files we cannot stat
-		}
-	}
-
-	return bestPath;
+async function discoverOrchestratorTranscript(
+	projectRoot: string,
+	platformType: string,
+): Promise<string | null> {
+	const platform = await createPlatform(platformType as any);
+	const discovery = await (platform.metrics as any).discoverOrchestratorTranscript?.(projectRoot);
+	return discovery?.path ?? null;
 }
 
 /** Aggregate totals from a list of SessionMetrics. */
@@ -287,7 +260,7 @@ export async function costsCommand(args: string[]): Promise<void> {
 
 	// Handle --self flag (early return for self-scan)
 	if (self) {
-		const transcriptPath = await discoverOrchestratorTranscript(config.project.root);
+		const transcriptPath = await discoverOrchestratorTranscript(config.project.root, config.platform.type);
 		if (!transcriptPath) {
 			if (json) {
 				process.stdout.write(

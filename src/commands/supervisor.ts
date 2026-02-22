@@ -20,10 +20,11 @@ import { createManifestLoader, resolveModel } from "../agents/manifest.ts";
 import { createBeadsClient } from "../beads/client.ts";
 import { loadConfig } from "../config.ts";
 import { AgentError, ValidationError } from "../errors.ts";
+import { createPlatform } from "../platform/factory.ts";
+import type { SpawnConfig } from "../platform/interface.ts";
 import { openSessionStore } from "../sessions/compat.ts";
 import type { AgentSession } from "../types.ts";
 import {
-	createSession,
 	isSessionAlive,
 	killSession,
 	sendKeys,
@@ -144,6 +145,9 @@ async function startSupervisor(args: string[]): Promise<void> {
 	const cwd = process.cwd();
 	const config = await loadConfig(cwd);
 	const projectRoot = config.project.root;
+
+	// Create platform instance for spawning
+	const platform = await createPlatform(config.platform.type);
 
 	// Validate bead exists and is workable (open or in_progress)
 	const beads = createBeadsClient(projectRoot);

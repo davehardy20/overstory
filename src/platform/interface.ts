@@ -44,6 +44,12 @@ export interface SpawnConfig {
 	depth: number;
 	/** Whether to attach to the agent session after spawn. */
 	attach?: boolean;
+	/** Custom command to run instead of default platform command. */
+	command?: string;
+	/** Environment variables to inject into the session. */
+	env?: Record<string, string>;
+	/** Session name override (defaults to agent-based naming). */
+	sessionName?: string;
 	/** Additional platform-specific options. */
 	extra?: Record<string, unknown>;
 }

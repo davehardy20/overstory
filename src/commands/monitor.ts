@@ -20,9 +20,11 @@ import { createIdentity, loadIdentity } from "../agents/identity.ts";
 import { createManifestLoader, resolveModel } from "../agents/manifest.ts";
 import { loadConfig } from "../config.ts";
 import { AgentError, ValidationError } from "../errors.ts";
+import { createPlatform } from "../platform/factory.ts";
+import type { SpawnConfig } from "../platform/interface.ts";
 import { openSessionStore } from "../sessions/compat.ts";
 import type { AgentSession } from "../types.ts";
-import { createSession, isSessionAlive, killSession, sendKeys } from "../worktree/tmux.ts";
+import { isSessionAlive, killSession, sendKeys } from "../worktree/tmux.ts";
 import { isRunningAsRoot } from "./sling.ts";
 
 /** Default monitor agent name. */
@@ -145,7 +147,10 @@ async function startMonitor(args: string[]): Promise<void> {
 		const manifest = await manifestLoader.load();
 		const { model, env } = resolveModel(config, manifest, "monitor", "sonnet");
 
-		// Spawn tmux session at project root with Claude Code (interactive mode).
+		// Create platform instance for spawning
+		const platform = await createPlatform(config.platform.type);
+
+		// Build spawn config for the monitor agent
 		// Inject the monitor base definition via --append-system-prompt.
 		const agentDefPath = join(projectRoot, ".overstory", "agent-defs", "monitor.md");
 		const agentDefFile = Bun.file(agentDefPath);
@@ -155,10 +160,26 @@ async function startMonitor(args: string[]): Promise<void> {
 			const escaped = agentDef.replace(/'/g, "'\\''");
 			claudeCmd += ` --append-system-prompt '${escaped}'`;
 		}
-		const pid = await createSession(tmuxSession, projectRoot, claudeCmd, {
-			...env,
-			OVERSTORY_AGENT_NAME: MONITOR_NAME,
-		});
+
+		const spawnConfig: SpawnConfig = {
+			agentName: MONITOR_NAME,
+			capability: "monitor",
+			worktreePath: projectRoot, // Monitor uses project root, not a worktree
+			branchName: config.project.canonicalBranch,
+			beadId: "", // No specific bead assignment
+			parentAgent: null,
+			depth: 0,
+			attach: shouldAttach,
+			command: claudeCmd,
+			env: {
+				...env,
+				OVERSTORY_AGENT_NAME: MONITOR_NAME,
+			},
+			sessionName: tmuxSession,
+		};
+
+		const spawnResult = await platform.spawner.spawn(spawnConfig);
+		const pid = spawnResult.pid;
 
 		// Record session BEFORE sending the beacon so that hook-triggered
 		// updateLastActivity() can find the entry and transition booting->working.
