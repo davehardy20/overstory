@@ -73,8 +73,6 @@ beforeEach(async () => {
 	process.env.OVERSTORY_SKIP_PLATFORM_CHECK = "true";
 	process.chdir(originalCwd);
 	tempDir = await realpath(await createTempGitRepo());
-	process.chdir(originalCwd);
-	tempDir = await realpath(await createTempGitRepo());
 
 	// Create minimal .overstory/ with config.yaml
 	const overstoryDir = join(tempDir, ".overstory");
