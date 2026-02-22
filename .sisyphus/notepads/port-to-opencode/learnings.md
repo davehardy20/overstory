@@ -58,3 +58,29 @@ All dependencies are complete. All 4 tasks can run in parallel.
 3. Task 29: Update CLAUDE.md with Opencode documentation
 4. Task 30: Create MIGRATION.md migration guide
 Created MIGRATION.md with comprehensive instructions for moving from Claude Code to Opencode. The guide emphasizes that migration is optional and documents key changes in configuration, hook locations, and context file naming (AGENTS.md).
+
+## Test Platform Abstraction (Task 32)
+
+### Key Changes
+- Added `OVERSTORY_SKIP_PLATFORM_CHECK` environment variable to `src/platform/factory.ts`
+- This allows tests to create platform instances without the CLI being installed
+- Test files set this in their `beforeEach` hook
+
+### Pattern for Platform-Aware Tests
+Tests that call `createPlatform()` should:
+1. Set `process.env.OVERSTORY_SKIP_PLATFORM_CHECK = "true"` in beforeEach
+2. Use `getMockContextDir()` and `getMockHooksConfigPath()` from test-helpers.ts
+3. These helpers return correct paths for the platform being tested
+
+### Test Files Updated
+- `src/commands/hooks.test.ts` - Uses platform abstraction helpers
+- `src/platform/factory.ts` - Added skip check for tests
+
+### Remaining Failing Tests
+12 tests still fail due to:
+- AI resolver tests need actual AI mocking
+- E2E platform tests need actual CLI binaries
+- costs --self tests need transcript files
+- mulch search tests need actual mulch CLI
+
+These are pre-existing issues not related to platform abstraction.
