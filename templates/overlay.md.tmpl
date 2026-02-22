@@ -3,6 +3,17 @@
 # overwritten on the next spawn. Modify the template at
 # templates/overlay.md.tmpl in the overstory repo instead.
 
+{{#if claude}}
+# Claude Code Context
+This agent is running on the Claude Code platform.
+Context location: `.claude/CLAUDE.md`
+{{/if}}
+{{#if opencode}}
+# Opencode Context
+This agent is running on the Opencode platform.
+Context location: `AGENTS.md`
+{{/if}}
+
 {{BASE_DEFINITION}}
 
 ---

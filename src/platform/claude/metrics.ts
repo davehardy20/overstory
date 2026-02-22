@@ -6,9 +6,9 @@
  */
 
 import { existsSync, readdirSync, statSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import type { IPlatformMetrics, ParsedTranscript, TranscriptDiscovery } from "../interface.ts";
+import { getHomeDir } from "../utils.ts";
 
 /** Pricing per million tokens (USD) for Claude models. */
 interface ModelPricing {
@@ -93,7 +93,7 @@ export class ClaudeMetrics implements IPlatformMetrics {
 	 * @returns Absolute path to the transcripts directory
 	 */
 	getTranscriptsDir(): string {
-		return join(homedir(), ".claude", "projects");
+		return join(getHomeDir(), ".claude", "projects");
 	}
 
 	/**
@@ -106,7 +106,7 @@ export class ClaudeMetrics implements IPlatformMetrics {
 	 * @returns The most recently modified transcript, or null if none found
 	 */
 	async discoverOrchestratorTranscript(projectRoot: string): Promise<TranscriptDiscovery | null> {
-		const homeDir = homedir();
+		const homeDir = getHomeDir();
 		const projectKey = projectRoot.replace(/\//g, "-");
 		const projectDir = join(homeDir, ".claude", "projects", projectKey);
 

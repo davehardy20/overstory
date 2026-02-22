@@ -98,16 +98,16 @@ function formatQualityGates(config: OverlayConfig): string {
 		"",
 		"Before reporting completion, you MUST pass all quality gates:",
 		"",
-		"1. **Tests:** `bun test` — all tests must pass",
-		"2. **Lint:** `bun run lint` — zero errors",
-		"3. **Typecheck:** `bun run typecheck` — no TypeScript errors",
+		"1. **Tests:** \`bun test\` — all tests must pass",
+		"2. **Lint:** \`bun run lint\` — zero errors",
+		"3. **Typecheck:** \`bun run typecheck\` — no TypeScript errors",
 		`4. **Commit:** all changes committed to your branch (${config.branchName})`,
 		`5. **Record mulch learnings:** \`mulch record <domain> --type <convention|pattern|failure|decision> --description "..." --outcome-status success --outcome-agent ${config.agentName}\` — capture insights from your work`,
 		`6. **Signal completion:** send \`worker_done\` mail to ${config.parentAgent ?? "orchestrator"}: \`overstory mail send --to ${config.parentAgent ?? "orchestrator"} --subject "Worker done: ${config.beadId}" --body "Quality gates passed." --type worker_done --agent ${config.agentName}\``,
 		`7. **Close issue:** \`bd close ${config.beadId} --reason "summary of changes"\``,
 		"",
 		"Do NOT push to the canonical branch. Your work will be merged by the",
-		"orchestrator via `overstory merge`.",
+		"orchestrator via \`overstory merge\`.",
 	].join("\n");
 }
 
@@ -122,8 +122,8 @@ function formatConstraints(config: OverlayConfig): string {
 			"",
 			"- You are **read-only**: do NOT modify, create, or delete any files",
 			"- Do NOT commit, push, or make any git state changes",
-			"- Report completion via `bd close` AND `overstory mail send --type result`",
-			"- If you encounter a blocking issue, send mail with `--priority urgent --type error`",
+			"- Report completion via \`bd close\` AND \`overstory mail send --type result\`",
+			"- If you encounter a blocking issue, send mail with \`--priority urgent --type error\`",
 		].join("\n");
 	}
 
@@ -135,8 +135,8 @@ function formatConstraints(config: OverlayConfig): string {
 		"- Only modify files in your File Scope",
 		`- Commit only to your branch: ${config.branchName}`,
 		"- Never push to the canonical branch",
-		"- Report completion via `bd close` AND `overstory mail send --type result`",
-		"- If you encounter a blocking issue, send mail with `--priority urgent --type error`",
+		"- Report completion via \`bd close\` AND \`overstory mail send --type result\`",
+		"- If you encounter a blocking issue, send mail with \`--priority urgent --type error\`",
 	].join("\n");
 }
 
@@ -151,10 +151,10 @@ function formatCanSpawn(config: OverlayConfig): string {
 	return [
 		"You may spawn sub-workers using `overstory sling`. Example:",
 		"",
-		"```bash",
+		"\`\`\`bash",
 		"overstory sling <task-id> --capability builder --name <worker-name> \\",
 		`  --parent ${config.agentName} --depth ${config.depth + 1}`,
-		"```",
+		"\`\`\`",
 	].join("\n");
 }
 
@@ -209,10 +209,24 @@ export async function generateOverlay(config: OverlayConfig): Promise<string> {
 		"{{CONSTRAINTS}}": formatConstraints(config),
 		"{{SPEC_INSTRUCTION}}": specInstruction,
 		"{{SKIP_SCOUT}}": config.skipScout ? SKIP_SCOUT_SECTION : "",
-		"{{BASE_DEFINITION}}": config.baseDefinition,
+		"{{PLATFORM}}": config.platform ?? "claude",
+		"{{CONTEXT_FILE}}": config.platform === "opencode" ? "AGENTS.md" : ".claude/CLAUDE.md",
 	};
 
-	let result = template;
+	// Inject base definition first so it can contain its own placeholders
+	let result = template.replace("{{BASE_DEFINITION}}", config.baseDefinition);
+
+	// Process platform conditionals: {{#if platform}}...{{/if}}
+	const platform = config.platform ?? "claude";
+	result = result.replace(/{{#if (\w+)}}([\s\S]*?){{\/if}}/g, (_match, p, content) => {
+		return p.toLowerCase() === platform.toLowerCase() ? content.trim() : "";
+	});
+
+	// Process inverse platform conditionals: {{#unless platform}}...{{/unless}}
+	result = result.replace(/{{#unless (\w+)}}([\s\S]*?){{\/unless}}/g, (_match, p, content) => {
+		return p.toLowerCase() !== platform.toLowerCase() ? content.trim() : "";
+	});
+
 	for (const [placeholder, value] of Object.entries(replacements)) {
 		// Replace all occurrences — some placeholders appear multiple times
 		while (result.includes(placeholder)) {
@@ -273,13 +287,17 @@ export async function writeOverlay(
 	}
 
 	const content = await generateOverlay(config);
-	const claudeDir = join(worktreePath, ".claude");
-	const outputPath = join(claudeDir, "CLAUDE.md");
+	const platformId = config.platform ?? "claude";
+	const outputPath =
+		platformId === "opencode"
+			? join(worktreePath, "AGENTS.md")
+			: join(worktreePath, ".claude", "CLAUDE.md");
+	const outputDir = dirname(outputPath);
 
 	try {
-		await mkdir(claudeDir, { recursive: true });
+		await mkdir(outputDir, { recursive: true });
 	} catch (err) {
-		throw new AgentError(`Failed to create .claude/ directory at: ${claudeDir}`, {
+		throw new AgentError(`Failed to create directory at: ${outputDir}`, {
 			agentName: config.agentName,
 			cause: err instanceof Error ? err : undefined,
 		});

@@ -286,6 +286,7 @@ export interface OverlayConfig {
 	mulchExpertise?: string;
 	/** When true, lead agents should skip Phase 1 (scout) and go straight to Phase 2 (build). */
 	skipScout?: boolean;
+	platform?: "claude" | "opencode";
 }
 
 // === Merge Queue ===

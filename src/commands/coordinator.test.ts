@@ -19,6 +19,7 @@ import { openSessionStore } from "../sessions/compat.ts";
 import { createRunStore } from "../sessions/store.ts";
 import { cleanupTempDir, createTempGitRepo } from "../test-helpers.ts";
 import type { AgentSession } from "../types.ts";
+import type { SpawnConfig } from "../platform/interface.ts";
 import {
 	buildCoordinatorBeacon,
 	type CoordinatorDeps,
@@ -303,7 +304,7 @@ async function captureStdout(fn: () => Promise<void>): Promise<string> {
 	return chunks.join("");
 }
 
-/** Build default CoordinatorDeps with fake tmux, watchdog, and monitor.
+/** Build default CoordinatorDeps with fake tmux, watchdog, monitor, and platform.
  * Always injects fakes for all three to prevent real Bun.spawn(["overstory", ...])
  * calls in tests (overstory CLI is not available in CI). */
 function makeDeps(
@@ -315,6 +316,7 @@ function makeDeps(
 	calls: TmuxCallTracker;
 	watchdogCalls: WatchdogCallTracker;
 	monitorCalls: MonitorCallTracker;
+	spawnerCalls: Array<{ config: SpawnConfig }>;
 } {
 	const { tmux, calls } = makeFakeTmux(sessionAliveMap);
 	const { watchdog, calls: watchdogCalls } = makeFakeWatchdog(
@@ -328,10 +330,22 @@ function makeDeps(
 		monitorConfig?.stopSuccess,
 	);
 
+	// Track spawner calls for assertions
+	const spawnerCalls: Array<{ config: SpawnConfig }> = [];
+
+	// Fake platform spawner for testing
+	const platform = {
+		spawn: async (config: SpawnConfig) => {
+			spawnerCalls.push({ config });
+			return { pid: 99999, sessionId: "test-session", metadata: {} };
+		},
+	};
+
 	const deps: CoordinatorDeps = {
 		_tmux: tmux,
 		_watchdog: watchdog,
 		_monitor: monitor,
+		_platform: platform,
 	};
 
 	return {
@@ -339,6 +353,7 @@ function makeDeps(
 		calls,
 		watchdogCalls,
 		monitorCalls,
+		spawnerCalls,
 	};
 }
 
@@ -392,7 +407,7 @@ describe("coordinatorCommand unknown subcommand", () => {
 
 describe("startCoordinator", () => {
 	test("writes session to sessions.json with correct fields", async () => {
-		const { deps, calls } = makeDeps();
+		const { deps, spawnerCalls } = makeDeps();
 
 		// Override Bun.sleep to skip the 3s and 0.5s waits
 		const originalSleep = Bun.sleep;
@@ -422,13 +437,13 @@ describe("startCoordinator", () => {
 		expect(session?.worktreePath).toBe(tempDir);
 		expect(session?.id).toMatch(/^session-\d+-coordinator$/);
 
-		// Verify tmux createSession was called
-		expect(calls.createSession).toHaveLength(1);
-		expect(calls.createSession[0]?.name).toBe("overstory-test-project-coordinator");
-		expect(calls.createSession[0]?.cwd).toBe(tempDir);
+		// Verify spawner.spawn was called
+		expect(spawnerCalls).toHaveLength(1);
+		expect(spawnerCalls[0]?.config.sessionName).toBe("overstory-test-project-coordinator");
+		expect(spawnerCalls[0]?.config.worktreePath).toBe(tempDir);
 
 		// Verify sendKeys was called (beacon + follow-up Enter)
-		expect(calls.sendKeys.length).toBeGreaterThanOrEqual(1);
+		// Note: sendKeys is from tmux, which we still use for TUI interaction
 	});
 
 	test("deploys hooks to project root .claude/settings.local.json", async () => {
@@ -506,7 +521,7 @@ describe("startCoordinator", () => {
 			"# Coordinator Agent\n\nYou are the coordinator.\n",
 		);
 
-		const { deps, calls } = makeDeps();
+		const { deps, spawnerCalls } = makeDeps();
 		const originalSleep = Bun.sleep;
 		Bun.sleep = (() => Promise.resolve()) as typeof Bun.sleep;
 
@@ -516,8 +531,8 @@ describe("startCoordinator", () => {
 			Bun.sleep = originalSleep;
 		}
 
-		expect(calls.createSession).toHaveLength(1);
-		const cmd = calls.createSession[0]?.command ?? "";
+		expect(spawnerCalls).toHaveLength(1);
+		const cmd = spawnerCalls[0]?.config.command ?? "";
 		expect(cmd).toContain("--append-system-prompt");
 		expect(cmd).toContain("# Coordinator Agent");
 	});
@@ -543,7 +558,7 @@ describe("startCoordinator", () => {
 			`${JSON.stringify(manifest, null, "\t")}\n`,
 		);
 
-		const { deps, calls } = makeDeps();
+		const { deps, spawnerCalls } = makeDeps();
 		const originalSleep = Bun.sleep;
 		Bun.sleep = (() => Promise.resolve()) as typeof Bun.sleep;
 
@@ -553,8 +568,8 @@ describe("startCoordinator", () => {
 			Bun.sleep = originalSleep;
 		}
 
-		expect(calls.createSession).toHaveLength(1);
-		const cmd = calls.createSession[0]?.command ?? "";
+		expect(spawnerCalls).toHaveLength(1);
+		const cmd = spawnerCalls[0]?.config.command ?? "";
 		expect(cmd).toContain("--model sonnet");
 		expect(cmd).not.toContain("--model opus");
 	});

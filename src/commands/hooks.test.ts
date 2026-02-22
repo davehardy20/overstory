@@ -59,18 +59,25 @@ beforeEach(async () => {
 	await mkdir(overstoryDir, { recursive: true });
 	await Bun.write(
 		join(overstoryDir, "config.yaml"),
-		["project:", "  name: test-project", `  root: ${tempDir}`, "  canonicalBranch: main"].join(
-			"\n",
-		),
+		[
+			"project:",
+			"  name: test-project",
+			`  root: ${tempDir}`,
+			"  canonicalBranch: main",
+			"platform:",
+			"  type: claude",
+		].join("\n"),
 	);
-
 	process.chdir(tempDir);
 });
 
-afterEach(async () => {
+	afterEach(async () => {
 	process.chdir(originalCwd);
 	await cleanupTempDir(tempDir);
 });
+
+
+
 
 describe("hooksCommand help", () => {
 	test("--help outputs help text", async () => {

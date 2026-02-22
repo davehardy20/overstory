@@ -73,6 +73,10 @@ export interface CoordinatorDeps {
 		stop: () => Promise<boolean>;
 		isRunning: () => Promise<boolean>;
 	};
+	/** Platform spawner for testing. If not provided, uses real platform from config. */
+	_platform?: {
+		spawn: (config: SpawnConfig) => Promise<{ pid: number | null; sessionId: string; metadata: Record<string, unknown> }>;
+	};
 }
 
 /**
@@ -295,8 +299,9 @@ async function startCoordinator(args: string[], deps: CoordinatorDeps = {}): Pro
 	const cwd = process.cwd();
 	const config = await loadConfig(cwd);
 
-	// Create platform instance for spawning the coordinator
-	const platform = await createPlatform(config.platform.type);
+	// Create platform spawner for coordinator
+	// Use injected platform for testing, otherwise create from config
+	const spawner = deps._platform ?? (await createPlatform(config.platform.type)).spawner;
 	const projectRoot = config.project.root;
 	const watchdog = deps._watchdog ?? createDefaultWatchdog(projectRoot);
 	const monitor = deps._monitor ?? createDefaultMonitor(projectRoot);
@@ -387,7 +392,7 @@ async function startCoordinator(args: string[], deps: CoordinatorDeps = {}): Pro
 			},
 		};
 
-		const result = await platform.spawner.spawn(spawnConfig);
+		const result = await spawner.spawn(spawnConfig);
 		const pid = result.pid ?? 99999;
 
 		// Record session BEFORE sending the beacon so that hook-triggered

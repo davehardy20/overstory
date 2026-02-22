@@ -35,19 +35,21 @@ export function expandTilde(path: string): string {
 
 /**
  * Get the home directory of the current user.
- * Falls back to the USERPROFILE or HOME environment variable if os.homedir() fails.
+ * Checks HOME/USERPROFILE environment variables first (for testability),
+ * then falls back to os.homedir().
  *
  * @returns The home directory path, or "/" as a last resort
  */
 export function getHomeDir(): string {
-	const home = homedir();
-	if (home !== null && home !== undefined && home !== "") {
-		return home;
-	}
-	// Fallback to environment variables
+	// Check environment variables first (for testability)
 	const envHome = process.env.HOME ?? process.env.USERPROFILE;
 	if (envHome !== undefined && envHome !== "") {
 		return envHome;
+	}
+	// Fall back to os.homedir()
+	const home = homedir();
+	if (home !== null && home !== undefined && home !== "") {
+		return home;
 	}
 	// Last resort
 	return "/";
