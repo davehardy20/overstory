@@ -79,7 +79,7 @@ export async function detectPlatform(platform: PlatformType): Promise<PlatformDe
  * @returns Version string or null if unavailable
  */
 async function getPlatformVersion(
-	platform: PlatformType,
+	_platform: PlatformType,
 	binaryPath: string,
 ): Promise<string | null> {
 	try {

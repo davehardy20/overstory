@@ -351,7 +351,18 @@ class OpencodeSpawner implements IPlatformSpawner {
 		const command = config.command ?? "opencode";
 
 		// Build tmux args with custom command
-		const args = ["new-session", "-d", "-s", sessionId, "-c", config.worktreePath, command];
+		// Use bash -c to handle complex command strings with special characters
+		const args = [
+			"new-session",
+			"-d",
+			"-s",
+			sessionId,
+			"-c",
+			config.worktreePath,
+			"bash",
+			"-c",
+			command,
+		];
 
 		const proc = Bun.spawnSync(["tmux", ...args], {
 			stdout: "pipe",

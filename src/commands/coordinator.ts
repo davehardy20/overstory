@@ -361,21 +361,17 @@ async function startCoordinator(args: string[], deps: CoordinatorDeps = {}): Pro
 			join(projectRoot, config.agents.baseDir),
 		);
 		const manifest = await manifestLoader.load();
-		const { model, env } = resolveModel(config, manifest, "coordinator", "opus");
+		const { env } = resolveModel(config, manifest, "coordinator", "opus");
 
 		// Spawn tmux session at project root with Claude Code (interactive mode).
 		// Inject the coordinator base definition via --append-system-prompt so the
 		// coordinator knows its role, hierarchy rules, and delegation patterns
 		// (overstory-gaio, overstory-0kwf).
 		const agentDefPath = join(projectRoot, ".overstory", "agent-defs", "coordinator.md");
-		const agentDefFile = Bun.file(agentDefPath);
-		let claudeCmd = `claude --model ${model} --dangerously-skip-permissions`;
-		if (await agentDefFile.exists()) {
-			const agentDef = await agentDefFile.text();
-			// Single-quote the content for safe shell expansion (only escape single quotes)
-			const escaped = agentDef.replace(/'/g, "'\\''");
-			claudeCmd += ` --append-system-prompt '${escaped}'`;
-		}
+		const _agentDefFile = Bun.file(agentDefPath);
+		// For opencode platform, just run 'opencode' - it will use the AGENTS.md context
+		// file that was deployed by deployHooks() and load the coordinator definition
+		const opencodeCmd = "opencode";
 
 		// Build spawn config for platform spawner
 		const spawnConfig: SpawnConfig = {
@@ -386,7 +382,7 @@ async function startCoordinator(args: string[], deps: CoordinatorDeps = {}): Pro
 			beadId: "",
 			parentAgent: null,
 			depth: 0,
-			command: claudeCmd,
+			command: opencodeCmd,
 			sessionName: tmuxSession,
 			env: {
 				...env,

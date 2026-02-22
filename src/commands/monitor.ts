@@ -145,7 +145,7 @@ async function startMonitor(args: string[]): Promise<void> {
 			join(projectRoot, config.agents.baseDir),
 		);
 		const manifest = await manifestLoader.load();
-		const { model, env } = resolveModel(config, manifest, "monitor", "sonnet");
+		const { env } = resolveModel(config, manifest, "monitor", "sonnet");
 
 		// Create platform instance for spawning
 		const platform = await createPlatform(config.platform.type);
@@ -153,13 +153,9 @@ async function startMonitor(args: string[]): Promise<void> {
 		// Build spawn config for the monitor agent
 		// Inject the monitor base definition via --append-system-prompt.
 		const agentDefPath = join(projectRoot, ".overstory", "agent-defs", "monitor.md");
-		const agentDefFile = Bun.file(agentDefPath);
-		let claudeCmd = `claude --model ${model} --dangerously-skip-permissions`;
-		if (await agentDefFile.exists()) {
-			const agentDef = await agentDefFile.text();
-			const escaped = agentDef.replace(/'/g, "'\\''");
-			claudeCmd += ` --append-system-prompt '${escaped}'`;
-		}
+		const _agentDefFile = Bun.file(agentDefPath);
+		// Use opencode command for opencode platform
+		const monitorCmd = "opencode";
 
 		const spawnConfig: SpawnConfig = {
 			agentName: MONITOR_NAME,
@@ -170,7 +166,7 @@ async function startMonitor(args: string[]): Promise<void> {
 			parentAgent: null,
 			depth: 0,
 			attach: shouldAttach,
-			command: claudeCmd,
+			command: monitorCmd,
 			env: {
 				...env,
 				OVERSTORY_AGENT_NAME: MONITOR_NAME,

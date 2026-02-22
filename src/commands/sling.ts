@@ -560,8 +560,9 @@ export async function slingCommand(args: string[]): Promise<void> {
 
 		// 12. Create tmux session via platform spawner
 		const tmuxSessionName = `overstory-${config.project.name}-${name}`;
-		const { model, env } = resolveModel(config, manifest, capability, agentDef.model);
-		const claudeCmd = `claude --model ${model} --dangerously-skip-permissions`;
+		const { env } = resolveModel(config, manifest, capability, agentDef.model);
+		// Use opencode command for opencode platform
+		const agentCmd = "opencode";
 		const spawnResult = await platform.spawner.spawn({
 			agentName: name,
 			capability,
@@ -571,7 +572,7 @@ export async function slingCommand(args: string[]): Promise<void> {
 			parentAgent,
 			depth,
 			sessionName: tmuxSessionName,
-			command: claudeCmd,
+			command: agentCmd,
 			env: {
 				...env,
 				OVERSTORY_AGENT_NAME: name,
