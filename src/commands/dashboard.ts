@@ -20,6 +20,7 @@ import { createMetricsStore, type MetricsStore } from "../metrics/store.ts";
 import { openSessionStore } from "../sessions/compat.ts";
 import type { SessionStore } from "../sessions/store.ts";
 import type { MailMessage } from "../types.ts";
+import { evaluateHealth, transitionState } from "../watchdog/health.ts";
 import { getCachedTmuxSessions, getCachedWorktrees, type StatusData } from "./status.ts";
 
 /**
@@ -252,18 +253,29 @@ async function loadDashboardData(
 	const worktrees = await getCachedWorktrees(root);
 	const tmuxSessions = await getCachedTmuxSessions();
 
-	// Reconcile zombie states inline (same logic as gatherStatus)
+	// Reconcile states using health evaluation (ZFC principle)
 	const tmuxSessionNames = new Set(tmuxSessions.map((s) => s.name));
+
+	// Thresholds for stale/zombie detection (same as monitor)
+	const thresholds = { staleMs: 5 * 60 * 1000, zombieMs: 10 * 60 * 1000 }; // 5min stale, 10min zombie
+
 	for (const session of allSessions) {
-		if (session.state === "booting" || session.state === "working" || session.state === "stalled") {
-			const tmuxAlive = tmuxSessionNames.has(session.tmuxSession);
-			if (!tmuxAlive) {
-				try {
-					stores.sessionStore.updateState(session.agentName, "zombie");
-					session.state = "zombie";
-				} catch {
-					// Best effort: don't fail dashboard if update fails
-				}
+		// Skip completed agents
+		if (session.state === "completed") continue;
+
+		const tmuxAlive = tmuxSessionNames.has(session.tmuxSession);
+
+		// Run health evaluation to determine correct state
+		const healthCheck = evaluateHealth(session, tmuxAlive, thresholds);
+		const newState = transitionState(session.state, healthCheck);
+
+		// Update database if state should change
+		if (newState !== session.state) {
+			try {
+				stores.sessionStore.updateState(session.agentName, newState);
+				session.state = newState;
+			} catch {
+				// Best effort: don't fail dashboard if update fails
 			}
 		}
 	}

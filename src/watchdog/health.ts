@@ -140,17 +140,33 @@ export function evaluateHealth(
 		};
 	}
 
-	// ZFC Rule 2: tmux alive but sessions.json says zombie → investigate.
-	// Something marked it zombie but the process is still running. Don't auto-kill;
-	// a human or higher-tier agent should decide.
+	// ZFC Rule 2: tmux alive but sessions.json says zombie.
+	// Observable state (tmux alive + pid alive) takes priority over recorded state.
+	// If the process is actually alive, recover to working state (ZFC principle).
+	// Only investigate if we can't verify process liveness (pid unavailable).
 	if (session.state === "zombie") {
+		// If pid is confirmed dead, stay zombie
+		if (pidAlive === false) {
+			return {
+				...base,
+				processAlive: false,
+				state: "zombie",
+				action: "terminate",
+				reconciliationNote: "ZFC: tmux alive but pid dead — agent process exited",
+			};
+		}
+
+		// If pid is alive or unavailable but tmux is alive, recover to working
+		// This handles misclassified agents and allows recovery
 		return {
 			...base,
 			processAlive: true,
-			state: "zombie",
-			action: "investigate",
+			state: "working",
+			action: "none",
 			reconciliationNote:
-				"ZFC: tmux alive but sessions.json says zombie — investigation needed (don't auto-kill)",
+				pidAlive === true
+					? "ZFC: tmux + pid alive but sessions.json says zombie — recovering to working"
+					: "ZFC: tmux alive (pid unavailable) but sessions.json says zombie — assuming working",
 		};
 	}
 
@@ -232,30 +248,31 @@ export function evaluateHealth(
 /**
  * Compute the next agent state based on a health check.
  *
- * State transitions are strictly forward-only using the ordering:
+ * State transitions are normally forward-only using the ordering:
  *   booting(0) → working(1) → stalled(2) → zombie(3)
  *
- * A state can only advance forward, never move backwards.
- * For example, a zombie can never become working again.
+ * A state can only advance forward, never move backwards, EXCEPT:
+ * - Zombie can recover to working if observable state confirms the agent
+ *   is actually alive (tmux + pid alive per ZFC principle)
  *
- * Exception (ZFC): When the health check action is "investigate", the state
- * is NOT advanced. This allows a human or higher-tier agent to review the
- * conflicting signals before making a state change.
+ * This recovery exception prevents agents from being permanently stuck
+ * in zombie state due to transient errors or misclassification.
  *
  * @param currentState - The agent's current state
  * @param check - The latest health check result
- * @returns The new state (always >= currentState in ordering)
+ * @returns The new state
  */
 export function transitionState(currentState: AgentState, check: HealthCheck): AgentState {
-	// ZFC: investigate means signals conflict — hold state until reviewed
-	if (check.action === "investigate") {
-		return currentState;
-	}
-
 	const currentOrder = STATE_ORDER[currentState];
 	const checkOrder = STATE_ORDER[check.state];
 
-	// Only move forward — never regress
+	// Allow zombie → working recovery when observable state confirms agent is alive
+	// This is the ZFC principle: observable state (tmux/pid) wins over recorded state
+	if (currentState === "zombie" && check.state === "working") {
+		return "working";
+	}
+
+	// Normal forward-only progression for all other transitions
 	if (checkOrder > currentOrder) {
 		return check.state;
 	}

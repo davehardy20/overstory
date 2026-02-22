@@ -102,18 +102,30 @@ describe("evaluateHealth", () => {
 		expect(check.reconciliationNote).toBeNull();
 	});
 
-	// --- ZFC Rule 2: tmux alive + sessions.json says zombie → investigate ---
+	// --- ZFC Rule 2: tmux alive + sessions.json says zombie → recover ---
+	// Observable state (tmux + pid alive) takes priority over recorded state.
+	// Agents incorrectly marked as zombie should recover to working.
 
-	test("ZFC: tmux alive + sessions.json says zombie → investigate (don't auto-kill)", () => {
+	test("ZFC: tmux alive + pid alive + sessions.json says zombie → recover to working", () => {
 		const session = makeSession({ state: "zombie", pid: ALIVE_PID });
 		const check = evaluateHealth(session, true, THRESHOLDS);
 
-		expect(check.state).toBe("zombie");
-		expect(check.action).toBe("investigate");
+		expect(check.state).toBe("working");
+		expect(check.action).toBe("none");
 		expect(check.processAlive).toBe(true);
 		expect(check.reconciliationNote).toContain("ZFC");
-		expect(check.reconciliationNote).toContain("investigation needed");
-		expect(check.reconciliationNote).toContain("don't auto-kill");
+		expect(check.reconciliationNote).toContain("recovering");
+	});
+
+	test("ZFC: tmux alive + pid unavailable + sessions.json says zombie → assume working", () => {
+		const session = makeSession({ state: "zombie", pid: null });
+		const check = evaluateHealth(session, true, THRESHOLDS);
+
+		expect(check.state).toBe("working");
+		expect(check.action).toBe("none");
+		expect(check.processAlive).toBe(true);
+		expect(check.reconciliationNote).toContain("ZFC");
+		expect(check.reconciliationNote).toContain("assuming working");
 	});
 
 	// --- ZFC Rule 3: pid dead + tmux alive → zombie ---
@@ -393,39 +405,53 @@ describe("transitionState", () => {
 		expect(transitionState("working", check)).toBe("working");
 	});
 
-	// --- ZFC: investigate holds state ---
+	// --- ZFC: zombie recovery ---
 
-	test("ZFC: investigate action holds current state (does not advance)", () => {
+	test("ZFC: zombie can recover to working when observable state confirms alive", () => {
 		const check = {
-			state: "zombie" as const,
+			state: "working" as const,
 			agentName: "a",
 			timestamp: "",
 			tmuxAlive: true,
 			pidAlive: true as boolean | null,
 			lastActivity: "",
 			processAlive: true,
-			action: "investigate" as const,
-			reconciliationNote: "ZFC: tmux alive but sessions.json says zombie",
+			action: "none" as const,
+			reconciliationNote: "ZFC: recovering from zombie",
 		};
-		// Even though check.state is zombie (order 4) and current is zombie (order 4),
-		// investigate should hold — not advance
-		expect(transitionState("zombie", check)).toBe("zombie");
+		// Zombie → working recovery allowed when observable state confirms agent is alive
+		expect(transitionState("zombie", check)).toBe("working");
 	});
 
-	test("ZFC: investigate prevents forward transition", () => {
-		const check = {
-			state: "zombie" as const,
+	test("ZFC: forward progression respects observable state", () => {
+		// Normal progression: working can advance to stalled
+		const stalledCheck = {
+			state: "stalled" as const,
 			agentName: "a",
 			timestamp: "",
 			tmuxAlive: true,
 			pidAlive: true as boolean | null,
 			lastActivity: "",
 			processAlive: true,
-			action: "investigate" as const,
-			reconciliationNote: "ZFC conflict",
+			action: "escalate" as const,
+			reconciliationNote: null,
 		};
-		// If something were at "working" and check says zombie with investigate,
-		// the state should NOT advance
-		expect(transitionState("working", check)).toBe("working");
+		expect(transitionState("working", stalledCheck)).toBe("stalled");
+
+		// When observable state says zombie (tmux dead or pid dead),
+		// ZFC principle says we transition immediately regardless of current state
+		const zombieCheck = {
+			state: "zombie" as const,
+			agentName: "a",
+			timestamp: "",
+			tmuxAlive: false, // tmux dead confirms zombie state
+			pidAlive: null,
+			lastActivity: "",
+			processAlive: false,
+			action: "terminate" as const,
+			reconciliationNote: "ZFC: tmux dead",
+		};
+		// Per ZFC, observable state (tmux dead) wins - transition to zombie
+		expect(transitionState("working", zombieCheck)).toBe("zombie");
 	});
 });
