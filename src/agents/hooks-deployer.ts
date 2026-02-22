@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { AgentError } from "../errors.ts";
+import { loadTemplate, TEMPLATE_FILES } from "../templates.ts";
 
 /**
  * Capabilities that must never modify project files.
@@ -120,14 +121,7 @@ interface HookEntry {
 	hooks: Array<{ type: string; command: string }>;
 }
 
-/**
- * Resolve the path to the hooks template file.
- * The template lives at `templates/hooks.json.tmpl` relative to the repo root.
- */
-function getTemplatePath(): string {
-	// src/agents/hooks-deployer.ts -> repo root is ../../
-	return join(dirname(import.meta.dir), "..", "templates", "hooks.json.tmpl");
-}
+
 
 /**
  * Env var guard prefix for hook commands.
@@ -489,24 +483,14 @@ export async function deployHooks(
 	agentName: string,
 	capability = "builder",
 ): Promise<void> {
-	const templatePath = getTemplatePath();
-	const file = Bun.file(templatePath);
-	const exists = await file.exists();
-
-	if (!exists) {
-		throw new AgentError(`Hooks template not found: ${templatePath}`, {
-			agentName,
-		});
-	}
-
 	let template: string;
 	try {
-		template = await file.text();
+		template = await loadTemplate(TEMPLATE_FILES.HOOKS);
 	} catch (err) {
-		throw new AgentError(`Failed to read hooks template: ${templatePath}`, {
-			agentName,
-			cause: err instanceof Error ? err : undefined,
-		});
+		throw new AgentError(
+			`Failed to load hooks template: ${TEMPLATE_FILES.HOOKS}`,
+			{ agentName, cause: err instanceof Error ? err : undefined },
+		);
 	}
 
 	// Replace all occurrences of {{AGENT_NAME}}
