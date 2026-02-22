@@ -24,10 +24,10 @@
 		"bun": ">=1.0"
 	},
 	"bin": {
-		"overstory": "./dist/index.js"
+		"overstory": "./dist/overstory"
 	},
 	"scripts": {
-		"build": "bun build ./src/index.ts --outdir ./dist --target bun --minify && chmod +x ./dist/index.js",
+		"build": "bun build --compile ./src/index.ts --outfile ./dist/overstory",
 		"prepublishOnly": "bun run build",
 		"test": "bun test",
 		"lint": "biome check .",
