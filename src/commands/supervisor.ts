@@ -208,21 +208,25 @@ async function startSupervisor(args: string[]): Promise<void> {
 		const manifest = await manifestLoader.load();
 		const { model, env } = resolveModel(config, manifest, "supervisor", "opus");
 
-		// Spawn tmux session at project root with Claude Code (interactive mode).
-		// Inject the supervisor base definition via --append-system-prompt.
-		const tmuxSession = `overstory-${config.project.name}-supervisor-${flags.name}`;
-		const agentDefPath = join(projectRoot, ".overstory", "agent-defs", "supervisor.md");
-		const agentDefFile = Bun.file(agentDefPath);
-		let claudeCmd = `claude --model ${model} --dangerously-skip-permissions`;
-		if (await agentDefFile.exists()) {
-			const agentDef = await agentDefFile.text();
-			const escaped = agentDef.replace(/'/g, "'\\''");
-			claudeCmd += ` --append-system-prompt '${escaped}'`;
-		}
-		const pid = await createSession(tmuxSession, projectRoot, claudeCmd, {
-			...env,
-			OVERSTORY_AGENT_NAME: flags.name,
-		});
+		// Build spawn config and use platform spawner
+		const spawnConfig: SpawnConfig = {
+			agentName: flags.name,
+			capability: "supervisor",
+			worktreePath: projectRoot,
+			branchName: config.project.canonicalBranch,
+			beadId: flags.task,
+			parentAgent: flags.parent,
+			depth: flags.depth,
+			sessionName: `overstory-${config.project.name}-supervisor-${flags.name}`,
+			env: {
+				...env,
+				OVERSTORY_AGENT_NAME: flags.name,
+			},
+		};
+
+		const spawnResult = await platform.spawner.spawn(spawnConfig);
+		const tmuxSession = spawnResult.sessionId;
+		const pid = spawnResult.pid;
 
 		// Wait for Claude Code TUI to render before sending input
 		await waitForTuiReady(tmuxSession);
