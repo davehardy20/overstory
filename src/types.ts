@@ -68,6 +68,9 @@ export interface OverstoryConfig {
 		verbose: boolean;
 		redactSecrets: boolean;
 	};
+	platform: {
+		type: "auto" | "claude" | "opencode";
+	};
 }
 
 // === Agent Manifest ===

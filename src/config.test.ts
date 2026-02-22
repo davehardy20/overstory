@@ -297,6 +297,17 @@ watchdog:
 		expect(config.watchdog.tier0IntervalMs).toBe(20000);
 		expect(config.watchdog.tier1Enabled).toBe(true);
 	});
+
+	test("parses platform configuration from config.yaml", async () => {
+		await ensureOverstoryDir();
+		await writeConfig(`
+platform:
+  type: opencode
+`);
+
+		const config = await loadConfig(tempDir);
+		expect(config.platform.type).toBe("opencode");
+	});
 });
 
 describe("validateConfig", () => {
@@ -679,6 +690,7 @@ describe("DEFAULT_CONFIG", () => {
 		expect(DEFAULT_CONFIG.watchdog).toBeDefined();
 		expect(DEFAULT_CONFIG.models).toBeDefined();
 		expect(DEFAULT_CONFIG.logging).toBeDefined();
+		expect(DEFAULT_CONFIG.platform).toBeDefined();
 	});
 
 	test("has default providers with anthropic native", () => {
@@ -695,5 +707,9 @@ describe("DEFAULT_CONFIG", () => {
 		expect(DEFAULT_CONFIG.watchdog.tier0IntervalMs).toBe(30_000);
 		expect(DEFAULT_CONFIG.watchdog.staleThresholdMs).toBe(300_000);
 		expect(DEFAULT_CONFIG.watchdog.zombieThresholdMs).toBe(600_000);
+	});
+
+	test("has platform default set to auto", () => {
+		expect(DEFAULT_CONFIG.platform.type).toBe("auto");
 	});
 });

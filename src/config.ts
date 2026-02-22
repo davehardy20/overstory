@@ -52,6 +52,9 @@ export const DEFAULT_CONFIG: OverstoryConfig = {
 		verbose: false,
 		redactSecrets: true,
 	},
+	platform: {
+		type: "auto", // Auto-detect, prefer opencode
+	},
 };
 
 const CONFIG_FILENAME = "config.yaml";

@@ -75,6 +75,9 @@ const mockConfig: OverstoryConfig = {
 		verbose: false,
 		redactSecrets: true,
 	},
+	platform: {
+		type: "auto",
+	},
 };
 
 describe("checkConfig", () => {
