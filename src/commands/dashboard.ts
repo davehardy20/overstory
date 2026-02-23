@@ -288,7 +288,7 @@ async function loadDashboardData(
 	let unreadMailCount = 0;
 	if (stores.mailStore) {
 		try {
-			const unread = stores.mailStore.getAll({ to: "orchestrator", unread: true });
+			const unread = stores.mailStore.getAll({ to: "coordinator", unread: true });
 			unreadMailCount = unread.length;
 		} catch {
 			// best effort

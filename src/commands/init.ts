@@ -282,7 +282,7 @@ function buildHooksJson(): string {
 					hooks: [
 						{
 							type: "command",
-							command: "overstory prime --agent orchestrator",
+							command: "overstory prime --agent coordinator",
 						},
 					],
 				},
@@ -293,7 +293,7 @@ function buildHooksJson(): string {
 					hooks: [
 						{
 							type: "command",
-							command: "overstory mail check --inject --agent orchestrator",
+							command: "overstory mail check --inject --agent coordinator",
 						},
 					],
 				},
@@ -314,7 +314,7 @@ function buildHooksJson(): string {
 					hooks: [
 						{
 							type: "command",
-							command: `${toolNameExtract} overstory log tool-start --agent orchestrator --tool-name "$TOOL_NAME"`,
+							command: `${toolNameExtract} overstory log tool-start --agent coordinator --tool-name "$TOOL_NAME"`,
 						},
 					],
 				},
@@ -325,7 +325,7 @@ function buildHooksJson(): string {
 					hooks: [
 						{
 							type: "command",
-							command: `${toolNameExtract} overstory log tool-end --agent orchestrator --tool-name "$TOOL_NAME"`,
+							command: `${toolNameExtract} overstory log tool-end --agent coordinator --tool-name "$TOOL_NAME"`,
 						},
 					],
 				},
@@ -346,7 +346,7 @@ function buildHooksJson(): string {
 					hooks: [
 						{
 							type: "command",
-							command: "overstory log session-end --agent orchestrator",
+							command: "overstory log session-end --agent coordinator",
 						},
 						{
 							type: "command",
@@ -361,7 +361,7 @@ function buildHooksJson(): string {
 					hooks: [
 						{
 							type: "command",
-							command: "overstory prime --agent orchestrator --compact",
+							command: "overstory prime --agent coordinator --compact",
 						},
 					],
 				},

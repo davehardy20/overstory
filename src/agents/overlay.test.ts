@@ -270,14 +270,14 @@ describe("generateOverlay", () => {
 		expect(output).toContain("overstory mail send --to lead-alpha");
 	});
 
-	test("reviewer completion section uses orchestrator when no parent", async () => {
+	test("reviewer completion section uses coordinator when no parent", async () => {
 		const config = makeConfig({
 			capability: "reviewer",
 			parentAgent: null,
 		});
 		const output = await generateOverlay(config);
 
-		expect(output).toContain("--to orchestrator");
+		expect(output).toContain("--to coordinator");
 	});
 
 	test("output includes communication section with agent address", async () => {
