@@ -32,22 +32,21 @@ describe("factory", () => {
 
 	describe("AUTO_PLATFORM_TYPES", () => {
 		it("should contain all platform types including auto", () => {
-			expect(AUTO_PLATFORM_TYPES).toContain("claude");
 			expect(AUTO_PLATFORM_TYPES).toContain("opencode");
 			expect(AUTO_PLATFORM_TYPES).toContain("auto");
-			expect(AUTO_PLATFORM_TYPES).toHaveLength(3);
+			expect(AUTO_PLATFORM_TYPES).toHaveLength(2);
 		});
 	});
 
 	describe("detectPlatform", () => {
 		it("should return detection result when binary is found", async () => {
-			mockFindPlatformBinary.mockReturnValue("/usr/local/bin/claude");
+			mockFindPlatformBinary.mockReturnValue("/usr/local/bin/opencode");
 
-			const result = await detectPlatform("claude");
+			const result = await detectPlatform("opencode");
 
-			expect(result.platform).toBe("claude");
+			expect(result.platform).toBe("opencode");
 			expect(result.binaryFound).toBe(true);
-			expect(result.binaryPath).toBe("/usr/local/bin/claude");
+			expect(result.binaryPath).toBe("/usr/local/bin/opencode");
 		});
 
 		it("should return detection result when binary is not found", async () => {
@@ -64,42 +63,24 @@ describe("factory", () => {
 	describe("detectAvailablePlatforms", () => {
 		it("should return map of all platform detection results", async () => {
 			mockFindPlatformBinary.mockImplementation((platform: PlatformType) => {
-				if (platform === "claude") return "/usr/local/bin/claude";
-				if (platform === "opencode") return null;
+				if (platform === "opencode") return "/usr/local/bin/opencode";
 				return null;
 			});
 
 			const results = await detectAvailablePlatforms();
 
-			expect(results.size).toBe(2);
-			expect(results.get("claude")?.binaryFound).toBe(true);
-			expect(results.get("opencode")?.binaryFound).toBe(false);
+			expect(results.size).toBe(1);
+			expect(results.get("opencode")?.binaryFound).toBe(true);
 		});
 	});
 
 	describe("detectBestPlatform", () => {
-		it("should prefer opencode when both available", async () => {
-			mockFindPlatformBinary.mockImplementation((platform: PlatformType) => {
-				if (platform === "claude") return "/usr/local/bin/claude";
-				if (platform === "opencode") return "/usr/local/bin/opencode";
-				return null;
-			});
+		it("should return opencode when available", async () => {
+			mockFindPlatformBinary.mockReturnValue("/usr/local/bin/opencode");
 
 			const best = await detectBestPlatform();
 
 			expect(best).toBe("opencode");
-		});
-
-		it("should fallback to claude when only claude available", async () => {
-			mockFindPlatformBinary.mockImplementation((platform: PlatformType) => {
-				if (platform === "claude") return "/usr/local/bin/claude";
-				if (platform === "opencode") return null;
-				return null;
-			});
-
-			const best = await detectBestPlatform();
-
-			expect(best).toBe("claude");
 		});
 
 		it("should throw error when no platform available", async () => {
@@ -107,27 +88,9 @@ describe("factory", () => {
 
 			await expect(detectBestPlatform()).rejects.toThrow("No platform available");
 		});
-
-		it("should return opencode when only opencode available", async () => {
-			mockFindPlatformBinary.mockImplementation((platform: PlatformType) => {
-				if (platform === "claude") return null;
-				if (platform === "opencode") return "/usr/local/bin/opencode";
-				return null;
-			});
-
-			const best = await detectBestPlatform();
-
-			expect(best).toBe("opencode");
-		});
 	});
 
 	describe("createPlatform", () => {
-		it("should throw error when platform not available", async () => {
-			mockIsPlatformAvailable.mockReturnValue(false);
-
-			await expect(createPlatform("claude")).rejects.toThrow("Platform 'claude' is not available");
-		});
-
 		it("should throw error for unavailable opencode platform", async () => {
 			mockIsPlatformAvailable.mockReturnValue(false);
 
@@ -141,19 +104,13 @@ describe("factory", () => {
 
 			await expect(createPlatform("auto")).rejects.toThrow("No platform available");
 		});
-
-		it("should throw error when platform is not available", async () => {
-			mockIsPlatformAvailable.mockReturnValue(false);
-
-			await expect(createPlatform("claude")).rejects.toThrow(/Platform 'claude' is not available/);
-		});
 	});
 
 	describe("isPlatformTypeAvailable", () => {
 		it("should return true when platform available", () => {
 			mockIsPlatformAvailable.mockReturnValue(true);
 
-			expect(isPlatformTypeAvailable("claude")).toBe(true);
+			expect(isPlatformTypeAvailable("opencode")).toBe(true);
 		});
 
 		it("should return false when platform not available", () => {
@@ -164,38 +121,13 @@ describe("factory", () => {
 	});
 
 	describe("getPlatformSummary", () => {
-		it("should return summary with both available", async () => {
+		it("should return summary when opencode available", async () => {
 			mockIsPlatformAvailable.mockReturnValue(true);
 
 			const summary = await getPlatformSummary();
 
-			expect(summary.available).toContain("claude");
 			expect(summary.available).toContain("opencode");
 			expect(summary.unavailable).toHaveLength(0);
-			expect(summary.best).toBe("opencode");
-		});
-
-		it("should return summary with only claude available", async () => {
-			mockIsPlatformAvailable.mockImplementation((platform: PlatformType) => {
-				return platform === "claude";
-			});
-
-			const summary = await getPlatformSummary();
-
-			expect(summary.available).toContain("claude");
-			expect(summary.unavailable).toContain("opencode");
-			expect(summary.best).toBe("claude");
-		});
-
-		it("should return summary with only opencode available", async () => {
-			mockIsPlatformAvailable.mockImplementation((platform: PlatformType) => {
-				return platform === "opencode";
-			});
-
-			const summary = await getPlatformSummary();
-
-			expect(summary.available).toContain("opencode");
-			expect(summary.unavailable).toContain("claude");
 			expect(summary.best).toBe("opencode");
 		});
 
@@ -205,7 +137,6 @@ describe("factory", () => {
 			const summary = await getPlatformSummary();
 
 			expect(summary.available).toHaveLength(0);
-			expect(summary.unavailable).toContain("claude");
 			expect(summary.unavailable).toContain("opencode");
 			expect(summary.best).toBeNull();
 		});
@@ -220,7 +151,7 @@ describe("factory integration", () => {
 			// Re-import to get fresh module state
 			const { detectBestPlatform: realDetect } = await import(`./factory.ts?${Date.now()}`);
 			const best = await realDetect();
-			expect(["claude", "opencode"]).toContain(best);
+			expect(best).toBe("opencode");
 		} catch (error) {
 			expect(error).toBeInstanceOf(Error);
 			expect((error as Error).message).toContain("No platform available");

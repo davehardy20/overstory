@@ -18,8 +18,8 @@ import type { PlatformPaths, PlatformType } from "./types.ts";
  *
  * @example
  * ```ts
- * expandTilde("~/.claude/config.json")
- * // Returns: "/home/user/.claude/config.json"
+ * expandTilde("~/.config/opencode/config.json")
+ * // Returns: "/home/user/.config/opencode/config.json"
  * ```
  */
 export function expandTilde(path: string): string {
@@ -63,15 +63,13 @@ export function getHomeDir(): string {
  *
  * @example
  * ```ts
- * getDefaultConfigDir("claude")
- * // Returns: "/home/user/.claude"
+ * getDefaultConfigDir("opencode")
+ * // Returns: "/home/user/.config/opencode"
  * ```
  */
 export function getDefaultConfigDir(platform: PlatformType): string {
 	const home = getHomeDir();
 	switch (platform) {
-		case "claude":
-			return join(home, ".claude");
 		case "opencode":
 			return join(home, ".config", "opencode");
 		default: {
@@ -90,15 +88,13 @@ export function getDefaultConfigDir(platform: PlatformType): string {
  *
  * @example
  * ```ts
- * getDefaultSessionDir("claude")
- * // Returns: "/home/user/.claude/projects"
+ * getDefaultSessionDir("opencode")
+ * // Returns: "/home/user/.config/opencode/sessions"
  * ```
  */
 export function getDefaultSessionDir(platform: PlatformType): string {
 	const configDir = getDefaultConfigDir(platform);
 	switch (platform) {
-		case "claude":
-			return join(configDir, "projects");
 		case "opencode":
 			return join(configDir, "sessions");
 		default: {
@@ -117,7 +113,7 @@ export function getDefaultSessionDir(platform: PlatformType): string {
  *
  * @example
  * ```ts
- * const paths = resolvePlatformPaths("claude")
+ * const paths = resolvePlatformPaths("opencode")
  * // Returns: { homeDir, configDir, sessionDir, binaryPath }
  * ```
  */
@@ -180,12 +176,10 @@ export function findPlatformBinary(platform: PlatformType): string | null {
  * Get the binary name for a platform.
  *
  * @param platform - The platform type
- * @returns The binary name (e.g., "claude", "opencode")
+ * @returns The binary name (e.g., "opencode")
  */
 export function getBinaryName(platform: PlatformType): string {
 	switch (platform) {
-		case "claude":
-			return "claude";
 		case "opencode":
 			return "opencode";
 		default: {
@@ -209,15 +203,6 @@ function getCommonBinaryPaths(platform: PlatformType): string[] {
 	const paths: string[] = [];
 
 	switch (platform) {
-		case "claude":
-			// Common Claude Code installation locations
-			paths.push(
-				join(home, ".local", "bin", binaryName),
-				join(home, "bin", binaryName),
-				join("/usr", "local", "bin", binaryName),
-				join("/usr", "bin", binaryName),
-			);
-			break;
 		case "opencode":
 			// Common OpenCode installation locations
 			paths.push(

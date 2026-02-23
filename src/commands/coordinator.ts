@@ -243,7 +243,7 @@ function createDefaultMonitor(projectRoot: string): NonNullable<CoordinatorDeps[
 
 /**
  * Build the coordinator startup beacon — the first message sent to the coordinator
- * via tmux send-keys after Claude Code initializes.
+ * via tmux send-keys after opencode initializes.
  */
 export function buildCoordinatorBeacon(): string {
 	const timestamp = new Date().toISOString();
@@ -363,12 +363,7 @@ async function startCoordinator(args: string[], deps: CoordinatorDeps = {}): Pro
 		const manifest = await manifestLoader.load();
 		const { model: resolvedModel, env } = resolveModel(config, manifest, "coordinator", "opus");
 
-		// Spawn tmux session at project root with Claude Code (interactive mode).
-		// Inject the coordinator base definition via --append-system-prompt so the
-		// coordinator knows its role, hierarchy rules, and delegation patterns
-		// (overstory-gaio, overstory-0kwf).
-		const agentDefPath = join(projectRoot, ".overstory", "agent-defs", "coordinator.md");
-		const _agentDefFile = Bun.file(agentDefPath);
+		// Spawn tmux session at project root with opencode (interactive mode).
 		// For opencode platform, just run 'opencode' - it will use the AGENTS.md context
 		// file that was deployed by deployHooks() and load the coordinator definition
 		const opencodeCmd = "opencode";
@@ -421,7 +416,7 @@ async function startCoordinator(args: string[], deps: CoordinatorDeps = {}): Pro
 
 		store.upsert(session);
 
-		// Wait for Claude Code TUI to render before sending input
+		// Wait for opencode TUI to render before sending input
 		await tmux.waitForTuiReady(tmuxSession);
 		await Bun.sleep(1_000);
 
@@ -697,7 +692,7 @@ const COORDINATOR_HELP = `overstory coordinator — Manage the persistent coordi
 Usage: overstory coordinator <subcommand> [flags]
 
 Subcommands:
-  start                    Start the coordinator (spawns Claude Code at project root)
+  start                    Start the coordinator (spawns opencode at project root)
   stop                     Stop the coordinator (kills tmux session)
   status                   Show coordinator state
 

@@ -456,7 +456,7 @@ export const OVERSTORY_GITIGNORE = `# Wildcard+whitelist: ignore everything, whi
  */
 export const OVERSTORY_README = `# .overstory/
 
-This directory is managed by [overstory](https://github.com/jayminwest/overstory) — a multi-agent orchestration system for Claude Code.
+This directory is managed by [overstory](https://github.com/jayminwest/overstory) — a multi-agent orchestration system for opencode.
 
 Overstory turns a single Claude Code session into a multi-agent team by spawning worker agents in git worktrees via tmux, coordinating them through a custom SQLite mail system, and merging their work back with tiered conflict resolution.
 
@@ -631,6 +631,6 @@ export async function initCommand(args: string[]): Promise<void> {
 	}
 
 	process.stdout.write("\nDone.\n");
-	process.stdout.write("  Next: run `overstory hooks install` to enable Claude Code hooks.\n");
+	process.stdout.write("  Next: run `overstory hooks install` to enable opencode hooks.\n");
 	process.stdout.write("  Then: run `overstory status` to see the current state.\n");
 }

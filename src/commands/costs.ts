@@ -270,10 +270,7 @@ export async function costsCommand(args: string[]): Promise<void> {
 			config.platform.type,
 		);
 		if (!transcriptPath) {
-			const platformPath =
-				config.platform.type === "opencode"
-					? "~/.config/opencode/sessions/*.jsonl"
-					: "~/.claude/projects/{project-key}/*.jsonl";
+			const platformPath = "~/.config/opencode/sessions/*.jsonl";
 			if (json) {
 				process.stdout.write(
 					JSON.stringify({ error: "no_transcript", message: "No orchestrator transcript found" }) +

@@ -14,11 +14,7 @@ import { findPlatformBinary, isPlatformAvailable } from "./utils.ts";
 export type AutoPlatformType = PlatformType | "auto";
 
 /** All valid platform type strings including 'auto'. */
-export const AUTO_PLATFORM_TYPES: readonly AutoPlatformType[] = [
-	"claude",
-	"opencode",
-	"auto",
-] as const;
+export const AUTO_PLATFORM_TYPES: readonly AutoPlatformType[] = ["opencode", "auto"] as const;
 
 /**
  * Detect which platforms are available in the current environment.
@@ -28,7 +24,7 @@ export const AUTO_PLATFORM_TYPES: readonly AutoPlatformType[] = [
  * @example
  * ```ts
  * const available = await detectAvailablePlatforms();
- * // Returns: Map { "claude" => {...}, "opencode" => {...} }
+ * // Returns: Map { "opencode" => {...} }
  * ```
  */
 export async function detectAvailablePlatforms(): Promise<
@@ -36,7 +32,7 @@ export async function detectAvailablePlatforms(): Promise<
 > {
 	const results = new Map<PlatformType, PlatformDetectionResult>();
 
-	const platformTypes: PlatformType[] = ["claude", "opencode"];
+	const platformTypes: PlatformType[] = ["opencode"];
 
 	await Promise.all(
 		platformTypes.map(async (platform) => {
@@ -105,8 +101,7 @@ async function getPlatformVersion(
  *
  * Detection order:
  * 1. Always prefer 'opencode' on the opencode-port branch
- * 2. Fallback to 'claude' only if opencode is not available
- * 3. Throw error if neither is available
+ * 2. Throw error if opencode is not available
  *
  * @returns The detected platform type
  * @throws Error if no platform is available
@@ -120,14 +115,7 @@ export async function detectBestPlatform(): Promise<PlatformType> {
 		return "opencode";
 	}
 
-	// Only fallback to claude if opencode is truly not available
-	const claude = available.get("claude");
-	if (claude?.binaryFound) {
-		console.warn("Warning: Opencode not available, falling back to Claude Code");
-		return "claude";
-	}
-
-	// Neither available
+	// Opencode is the only platform supported
 	throw new Error("No platform available. Install 'opencode' CLI to use Overstory.");
 }
 
@@ -148,7 +136,6 @@ export async function detectBestPlatform(): Promise<PlatformType> {
  * const platform = await createPlatform('auto');
  *
  * // Explicit platform
- * const claude = await createPlatform('claude');
  * const opencode = await createPlatform('opencode');
  * ```
  */
@@ -178,10 +165,6 @@ export async function createPlatform(platformType: AutoPlatformType): Promise<IP
 async function loadPlatformImplementation(platform: PlatformType): Promise<IPlatform> {
 	try {
 		switch (platform) {
-			case "claude": {
-				const module = await import("./claude/index.ts");
-				return module.createClaudePlatform();
-			}
 			case "opencode": {
 				const module = await import("./opencode/index.ts");
 				return module.createOpencodePlatform();
@@ -226,7 +209,7 @@ export async function getPlatformSummary(): Promise<{
 	const available: PlatformType[] = [];
 	const unavailable: PlatformType[] = [];
 
-	const platformTypes: PlatformType[] = ["claude", "opencode"];
+	const platformTypes: PlatformType[] = ["opencode"];
 
 	for (const platform of platformTypes) {
 		if (isPlatformAvailable(platform)) {

@@ -6,7 +6,7 @@
  * and platform-specific scaffolding.
  *
  * Tests use platform abstraction helpers to get correct paths for
- * the configured platform (Claude Code by default).
+ * the configured platform (opencode by default).
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -58,14 +58,14 @@ async function captureStdout(fn: () => Promise<void>): Promise<string> {
 	return chunks.join("");
 }
 
-/** Get the expected hooks config path for the test platform (Claude). */
+/** Get the expected hooks config path for the test platform (opencode). */
 function getExpectedHooksPath(projectRoot: string): string {
-	return getMockHooksConfigPath(projectRoot, "claude");
+	return getMockHooksConfigPath(projectRoot, "opencode");
 }
 
-/** Get the expected context directory for the test platform (Claude). */
+/** Get the expected context directory for the test platform (opencode). */
 function getExpectedContextDir(projectRoot: string): string {
-	return getMockContextDir(projectRoot, "claude");
+	return getMockContextDir(projectRoot, "opencode");
 }
 
 beforeEach(async () => {
@@ -85,7 +85,7 @@ beforeEach(async () => {
 			`  root: ${tempDir}`,
 			"  canonicalBranch: main",
 			"platform:",
-			"  type: claude",
+			"  type: opencode",
 		].join("\n"),
 	);
 	process.chdir(tempDir);

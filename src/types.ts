@@ -69,7 +69,7 @@ export interface OverstoryConfig {
 		redactSecrets: boolean;
 	};
 	platform: {
-		type: "auto" | "claude" | "opencode";
+		type: "auto" | "opencode";
 	};
 }
 

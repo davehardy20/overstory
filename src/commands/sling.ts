@@ -289,10 +289,9 @@ export async function slingCommand(args: string[]): Promise<void> {
 	}
 
 	if (isRunningAsRoot()) {
-		throw new AgentError(
-			"Cannot spawn agents as root (UID 0). The claude CLI rejects --dangerously-skip-permissions when run as root, causing the tmux session to die immediately. Run overstory as a non-root user.",
-			{ agentName: name },
-		);
+		throw new AgentError("Cannot spawn agents as root (UID 0). Run overstory as a non-root user.", {
+			agentName: name,
+		});
 	}
 
 	// Warn if --skip-scout is used for a non-lead capability (harmless but confusing)
@@ -614,7 +613,7 @@ export async function slingCommand(args: string[]): Promise<void> {
 			runStore.close();
 		}
 
-		// 13b. Wait for Claude Code TUI to render before sending input.
+		// 13b. Wait for opencode TUI to render before sending input.
 		// Polling capture-pane is more reliable than a fixed sleep because
 		// TUI init time varies by machine load and model state.
 		await waitForTuiReady(tmuxSessionName);
@@ -631,7 +630,7 @@ export async function slingCommand(args: string[]): Promise<void> {
 		await sendKeys(tmuxSessionName, beacon);
 
 		// 13c. Follow-up Enters with increasing delays to ensure submission.
-		// Claude Code's TUI may consume early Enters during late initialization
+		// opencode's TUI may consume early Enters during late initialization
 		// (overstory-yhv6). An Enter on an empty input line is harmless.
 		for (const delay of [1_000, 2_000]) {
 			await Bun.sleep(delay);

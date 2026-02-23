@@ -8,10 +8,10 @@
 // === Platform Identification ===
 
 /** Supported AI agent platforms. */
-export type PlatformType = "claude" | "opencode";
+export type PlatformType = "opencode";
 
 /** All valid platform type strings as a runtime array. */
-export const PLATFORM_TYPES: readonly PlatformType[] = ["claude", "opencode"] as const;
+export const PLATFORM_TYPES: readonly PlatformType[] = ["opencode"] as const;
 
 // === Platform Configuration ===
 
@@ -53,7 +53,7 @@ export interface PlatformDetectionResult {
 export interface PlatformPaths {
 	/** Home directory of the current user. */
 	homeDir: string;
-	/** Platform-specific config directory (e.g., ~/.claude, ~/.config/opencode). */
+	/** Platform-specific config directory (e.g., ~/.config/opencode). */
 	configDir: string;
 	/** Platform-specific session/project directory. */
 	sessionDir: string;
