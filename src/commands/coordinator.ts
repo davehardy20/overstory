@@ -414,7 +414,30 @@ async function startCoordinator(args: string[], deps: CoordinatorDeps = {}): Pro
 			stalledSince: null,
 		};
 
-		store.upsert(session);
+		// Persist session to database with verification
+		try {
+			store.upsert(session);
+
+			// Verify the session was actually persisted
+			const verifySession = store.getByName(COORDINATOR_NAME);
+			if (!verifySession) {
+				throw new AgentError(
+					"Coordinator session was not persisted to database. The upsert succeeded but the session cannot be retrieved.",
+					{ agentName: COORDINATOR_NAME },
+				);
+			}
+		} catch (err) {
+			// Kill the tmux session since we can't track it
+			try {
+				await tmux.killSession(tmuxSession);
+			} catch {
+				// Best effort cleanup
+			}
+			throw new AgentError(
+				`Failed to persist coordinator session: ${err instanceof Error ? err.message : String(err)}`,
+				{ agentName: COORDINATOR_NAME },
+			);
+		}
 
 		// Wait for opencode TUI to render before sending input
 		await tmux.waitForTuiReady(tmuxSession);
