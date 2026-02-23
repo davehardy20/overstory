@@ -10,8 +10,9 @@
  */
 
 import { Database } from "bun:sqlite";
-import { mkdir, readdir } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { basename, join } from "node:path";
+import { EMBEDDED_AGENTS } from "../agents/embedded.ts";
 import { DEFAULT_CONFIG } from "../config.ts";
 import { ValidationError } from "../errors.ts";
 import type { AgentManifest, OverstoryConfig } from "../types.ts";
@@ -579,14 +580,11 @@ export async function initCommand(args: string[]): Promise<void> {
 		printCreated(`${dir}/`);
 	}
 
-	// 3b. Deploy agent definition .md files from overstory install directory
-	const overstoryAgentsDir = join(import.meta.dir, "..", "..", "agents");
+	// 3b. Deploy agent definition .md files from embedded resources
+	// Agent files are embedded at build time via src/agents/embedded.ts
 	const agentDefsTarget = join(overstoryPath, "agent-defs");
-	const agentDefFiles = await readdir(overstoryAgentsDir);
-	for (const fileName of agentDefFiles) {
-		if (!fileName.endsWith(".md")) continue;
-		const source = Bun.file(join(overstoryAgentsDir, fileName));
-		const content = await source.text();
+
+	for (const [fileName, content] of Object.entries(EMBEDDED_AGENTS)) {
 		await Bun.write(join(agentDefsTarget, fileName), content);
 		printCreated(`${OVERSTORY_DIR}/agent-defs/${fileName}`);
 	}

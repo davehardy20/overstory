@@ -1,13 +1,23 @@
 import { dirname, join } from "node:path";
+import { EMBEDDED_TEMPLATES } from "./templates-embedded.ts";
 
 /**
  * Template file names used by overstory.
- * These are embedded at build time for compiled binary support.
+ * These are embedded at build time via templates-embedded.ts
  */
 export const TEMPLATE_FILES = {
 	HOOKS: "templates/hooks.json.tmpl",
 	OVERLAY: "templates/overlay.md.tmpl",
 } as const;
+
+/**
+ * Map template file paths to embedded template names
+ */
+const TEMPLATE_PATH_TO_NAME: Record<string, keyof typeof EMBEDDED_TEMPLATES> = {
+	"templates/hooks.json.tmpl": "HOOKS",
+	"templates/overlay.md.tmpl": "OVERLAY",
+	"templates/opencode-hooks.json.tmpl": "OPENCODE_HOOKS",
+};
 
 /**
  * Cached repo root path for template resolution.
@@ -55,28 +65,21 @@ async function findRepoRoot(): Promise<string> {
  * Load a template file content.
  *
  * Works in both development mode (bun src/index.ts) and compiled binary mode.
- * In compiled mode, templates are embedded via --embed flag at build time.
- * In development mode, templates are read from the filesystem.
+ * Templates are embedded as TypeScript strings in templates-embedded.ts at build time.
+ * In development mode, templates are also available from the filesystem.
  *
  * @param templateName - The template file path relative to repo root (e.g., "templates/hooks.json.tmpl")
  * @returns The template content as a string
  * @throws {Error} If the template cannot be found or read
  */
 export async function loadTemplate(templateName: string): Promise<string> {
-	// Try embedded file first (works in compiled binary)
-	// Bun.file() with a relative path resolves from the binary location for embedded files
-	try {
-		const embeddedFile = Bun.file(templateName);
-		const exists = await embeddedFile.exists();
-		if (exists) {
-			return await embeddedFile.text();
-		}
-	} catch {
-		// Fall through to filesystem lookup
+	// Try embedded template first (works in compiled binary and development)
+	const embeddedName = TEMPLATE_PATH_TO_NAME[templateName];
+	if (embeddedName && embeddedName in EMBEDDED_TEMPLATES) {
+		return EMBEDDED_TEMPLATES[embeddedName];
 	}
 
 	// Fall back to filesystem (works in development and test modes)
-	// Use robust repo root detection instead of assuming import.meta.dir location
 	const repoRoot = await findRepoRoot();
 	const filesystemPath = join(repoRoot, templateName);
 	const file = Bun.file(filesystemPath);
@@ -84,7 +87,7 @@ export async function loadTemplate(templateName: string): Promise<string> {
 
 	if (!exists) {
 		throw new Error(
-			`Template not found: ${templateName}. Tried embedded path and filesystem path: ${filesystemPath}`,
+			`Template not found: ${templateName}. Tried embedded templates and filesystem path: ${filesystemPath}`,
 		);
 	}
 
@@ -109,20 +112,16 @@ export async function getTemplatePath(templateName: string): Promise<string> {
 /**
  * Check if a template exists.
  *
- * Checks both embedded (compiled binary) and filesystem (development) locations.
+ * Checks both embedded templates and filesystem locations.
  *
  * @param templateName - The template file path relative to repo root
  * @returns true if the template exists in either location
  */
 export async function templateExists(templateName: string): Promise<boolean> {
 	// Check embedded first
-	try {
-		const embeddedFile = Bun.file(templateName);
-		if (await embeddedFile.exists()) {
-			return true;
-		}
-	} catch {
-		// Fall through to filesystem check
+	const embeddedName = TEMPLATE_PATH_TO_NAME[templateName];
+	if (embeddedName && embeddedName in EMBEDDED_TEMPLATES) {
+		return true;
 	}
 
 	// Check filesystem using robust repo root detection

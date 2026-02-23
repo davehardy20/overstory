@@ -27,7 +27,7 @@
 		"overstory": "./dist/overstory"
 	},
 	"scripts": {
-		"build": "bun build --compile ./src/index.ts --outfile ./dist/overstory --embed ./templates/hooks.json.tmpl --embed ./templates/overlay.md.tmpl --embed ./templates/opencode-hooks.json.tmpl",
+		"build": "bun scripts/embed-agents.ts && bun scripts/embed-templates.ts && bun build --compile ./src/index.ts --outfile ./dist/overstory",
 		"prepublishOnly": "bun run build",
 		"test": "bun test",
 		"lint": "biome check .",
