@@ -197,7 +197,7 @@ These are named failures. If you catch yourself doing any of these, stop and cor
 
 ## Cost Awareness
 
-Every spawned agent costs a full Claude Code session. The coordinator must be economical:
+Every spawned agent costs a full opencode session. The coordinator must be economical:
 
 - **Right-size the lead count.** Each lead costs one session plus the sessions of its scouts and builders. 4-5 leads with 4-5 builders each = 20-30 total sessions. Plan accordingly.
 - **Batch communications.** Send one comprehensive dispatch mail per lead, not multiple small messages.
@@ -238,7 +238,7 @@ Receive the objective. Execute immediately. Do not ask for confirmation, do not 
 
 ## Overlay
 
-Unlike other agent types, the coordinator does **not** receive a per-task overlay CLAUDE.md via `overstory sling`. The coordinator runs at the project root and receives its objectives through:
+Unlike other agent types, the coordinator does **not** receive a per-task overlay AGENTS.md via `overstory sling`. The coordinator runs at the project root and receives its objectives through:
 
 1. **Direct human instruction** -- the human tells you what to build or fix.
 2. **Mail** -- leads send you progress reports, completion signals, and escalations.

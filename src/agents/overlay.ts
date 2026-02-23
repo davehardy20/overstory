@@ -149,7 +149,7 @@ function formatCanSpawn(config: OverlayConfig): string {
 }
 
 /**
- * Generate a per-worker CLAUDE.md overlay from the template.
+ * Generate a per-worker AGENTS.md overlay from the template.
  *
  * Reads `templates/overlay.md.tmpl` and replaces all `{{VARIABLE}}`
  * placeholders with values derived from the provided config.
@@ -189,15 +189,15 @@ export async function generateOverlay(config: OverlayConfig): Promise<string> {
 		"{{CONSTRAINTS}}": formatConstraints(config),
 		"{{SPEC_INSTRUCTION}}": specInstruction,
 		"{{SKIP_SCOUT}}": config.skipScout ? SKIP_SCOUT_SECTION : "",
-		"{{PLATFORM}}": config.platform ?? "claude",
-		"{{CONTEXT_FILE}}": config.platform === "opencode" ? "AGENTS.md" : ".claude/CLAUDE.md",
+		"{{PLATFORM}}": config.platform ?? "opencode",
+		"{{CONTEXT_FILE}}": "AGENTS.md",
 	};
 
 	// Inject base definition first so it can contain its own placeholders
 	let result = template.replace("{{BASE_DEFINITION}}", config.baseDefinition);
 
 	// Process platform conditionals: {{#if platform}}...{{/if}}
-	const platform = config.platform ?? "claude";
+	const platform = config.platform ?? "opencode";
 	result = result.replace(/{{#if (\w+)}}([\s\S]*?){{\/if}}/g, (_match, p, content) => {
 		return p.toLowerCase() === platform.toLowerCase() ? content.trim() : "";
 	});
@@ -222,7 +222,7 @@ export async function generateOverlay(config: OverlayConfig): Promise<string> {
  *
  * Agent overlays must NEVER be written to the canonical repo root -- they belong
  * in worktrees. Writing an overlay to the project root overwrites the orchestrator's
- * `.claude/CLAUDE.md`, breaking the user's own Claude Code session (overstory-uwg4).
+ * `AGENTS.md`, breaking the user's own opencode session (overstory-uwg4).
  *
  * Uses deterministic path comparison instead of checking for `.overstory/config.yaml`
  * because when dogfooding (running overstory on its own repo), that file is tracked
@@ -237,8 +237,7 @@ export function isCanonicalRoot(dir: string, canonicalRoot: string): boolean {
 }
 
 /**
- * Generate the overlay and write it to `{worktreePath}/.claude/CLAUDE.md`.
- * Creates the `.claude/` directory if it does not exist.
+ * Generate the overlay and write it to `{worktreePath}/AGENTS.md`.
  *
  * Includes a safety guard that prevents writing to the canonical project root.
  * Agent overlays belong in worktrees, never at the orchestrator's root.
@@ -255,23 +254,19 @@ export async function writeOverlay(
 	canonicalRoot: string,
 ): Promise<void> {
 	// Guard: never write agent overlays to the canonical project root.
-	// The project root's .claude/CLAUDE.md belongs to the orchestrator/user.
+	// The project root's AGENTS.md belongs to the orchestrator/user.
 	// Uses path comparison instead of file-existence heuristic to handle
 	// dogfooding scenarios where .overstory/config.yaml is tracked in git
 	// and appears in every worktree checkout (overstory-p4st).
 	if (isCanonicalRoot(worktreePath, canonicalRoot)) {
 		throw new AgentError(
-			`Refusing to write overlay to canonical project root: ${worktreePath}. Agent overlays must target a worktree, not the orchestrator's root directory. This prevents overwriting the user's .claude/CLAUDE.md.`,
+			`Refusing to write overlay to canonical project root: ${worktreePath}. Agent overlays must target a worktree, not the orchestrator's root directory. This prevents overwriting the user's AGENTS.md.`,
 			{ agentName: config.agentName },
 		);
 	}
 
 	const content = await generateOverlay(config);
-	const platformId = config.platform ?? "claude";
-	const outputPath =
-		platformId === "opencode"
-			? join(worktreePath, "AGENTS.md")
-			: join(worktreePath, ".claude", "CLAUDE.md");
+	const outputPath = join(worktreePath, "AGENTS.md");
 	const outputDir = dirname(outputPath);
 
 	try {

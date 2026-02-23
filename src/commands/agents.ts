@@ -42,7 +42,7 @@ export interface DiscoveredAgent {
 }
 
 /**
- * Extract file scope from an agent's overlay CLAUDE.md.
+ * Extract file scope from an agent's overlay AGENTS.md.
  * Returns empty array if overlay doesn't exist, has no file scope restrictions,
  * or can't be read.
  *
@@ -51,7 +51,7 @@ export interface DiscoveredAgent {
  */
 export async function extractFileScope(worktreePath: string): Promise<string[]> {
 	try {
-		const overlayPath = join(worktreePath, ".claude", "CLAUDE.md");
+		const overlayPath = join(worktreePath, "AGENTS.md");
 		const overlayFile = Bun.file(overlayPath);
 
 		if (!(await overlayFile.exists())) {

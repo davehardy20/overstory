@@ -8,7 +8,7 @@
  * Unlike regular agents spawned by sling, the coordinator:
  * - Has no worktree (operates on the main working tree)
  * - Has no bead assignment (it creates beads, not works on them)
- * - Has no overlay CLAUDE.md (context comes via mail + beads + checkpoints)
+ * - Has no overlay AGENTS.md (context comes via mail + beads + checkpoints)
  * - Persists across work batches
  */
 
@@ -263,8 +263,8 @@ export function buildCoordinatorBeacon(): string {
  * 1. Verify no coordinator is already running
  * 2. Load config
  * 3. Create agent identity (if first time)
- * 4. Deploy hooks to project root's .claude/settings.local.json
- * 5. Spawn tmux session at project root with Claude Code
+ * 4. Deploy hooks to project root's .opencode/settings.json
+ * 5. Spawn tmux session at project root with opencode
  * 6. Send startup beacon
  * 7. Record session in SessionStore (sessions.db)
  */
@@ -294,7 +294,7 @@ async function startCoordinator(args: string[], deps: CoordinatorDeps = {}): Pro
 
 	if (isRunningAsRoot()) {
 		throw new AgentError(
-			"Cannot spawn agents as root (UID 0). The claude CLI rejects --dangerously-skip-permissions when run as root, causing the tmux session to die immediately. Run overstory as a non-root user.",
+			"Cannot spawn agents as root (UID 0). The opencode CLI may reject operations when run as root, causing the tmux session to die immediately. Run overstory as a non-root user.",
 		);
 	}
 

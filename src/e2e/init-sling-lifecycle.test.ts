@@ -195,7 +195,7 @@ describe("E2E: init→sling lifecycle on external project", () => {
 		await writeOverlay(worktreePath, overlayConfig, tempDir);
 
 		// Verify the overlay was written
-		const overlayPath = join(worktreePath, ".claude", "CLAUDE.md");
+		const overlayPath = join(worktreePath, "AGENTS.md");
 		const overlayFile = Bun.file(overlayPath);
 		expect(await overlayFile.exists()).toBe(true);
 
@@ -260,7 +260,7 @@ describe("E2E: init→sling lifecycle on external project", () => {
 
 		await writeOverlay(worktreePath, overlayConfig, tempDir);
 
-		const overlayContent = await Bun.file(join(worktreePath, ".claude", "CLAUDE.md")).text();
+		const overlayContent = await Bun.file(join(worktreePath, "AGENTS.md")).text();
 
 		// Verify all overlay fields rendered correctly
 		expect(overlayContent).toContain("lifecycle-builder");

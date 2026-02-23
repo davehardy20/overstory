@@ -57,11 +57,10 @@ function padLeft(str: string, width: number): string {
 /**
  * Discover the orchestrator's Claude Code transcript JSONL file.
  *
- * Uses platform abstraction to discover transcripts, supporting both Claude Code
- * and Opencode platforms.
+ * Uses platform abstraction to discover transcripts, supporting Opencode platform.
  *
  * @param projectRoot - Absolute path to the project root
- * @param platformType - Platform type (claude or opencode)
+ * @param platformType - Platform type (always opencode)
  * @returns Absolute path to the most recent transcript, or null if none found
  */
 async function discoverOrchestratorTranscript(

@@ -150,7 +150,7 @@ async function handleClean(
 			}
 
 			// Remove worktree and its branch.
-			// Always force worktree removal since deployed .claude/ files create untracked
+			// Always force worktree removal since deployed AGENTS.md and .opencode/ files create untracked
 			// files that cause non-forced removal to fail.
 			// Always force-delete the branch since we're cleaning up finished/zombie agents
 			// whose branches are typically unmerged.

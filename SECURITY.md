@@ -29,7 +29,7 @@ We will keep you informed of progress throughout the process.
 
 ## Scope
 
-Overstory is a CLI tool that orchestrates multiple Claude Code agents via git worktrees, tmux sessions, and SQLite databases on the local filesystem. The following are considered security issues:
+Overstory is a CLI tool that orchestrates multiple Opencode agents via git worktrees, tmux sessions, and SQLite databases on the local filesystem. The following are considered security issues:
 
 - **Command injection** -- Unsanitized input passed to `Bun.spawn` or shell execution
 - **Path traversal** -- Accessing files outside the intended project or `.overstory/` directory

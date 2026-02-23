@@ -196,32 +196,9 @@ async function resolveTranscriptPath(
 		}
 	}
 
-	const homeDir = process.env.HOME ?? "";
-	const claudeProjectsDir = join(homeDir, ".claude", "projects");
-
-	// Try direct construction from project root
-	const projectKey = projectRoot.replace(/\//g, "-");
-	const directPath = join(claudeProjectsDir, projectKey, `${sessionId}.jsonl`);
-	if (await Bun.file(directPath).exists()) {
-		await Bun.write(cachePath, directPath);
-		return directPath;
-	}
-
-	// Search all project directories for the session file
-	const { readdir } = await import("node:fs/promises");
-	try {
-		const projects = await readdir(claudeProjectsDir);
-		for (const project of projects) {
-			const candidate = join(claudeProjectsDir, project, `${sessionId}.jsonl`);
-			if (await Bun.file(candidate).exists()) {
-				await Bun.write(cachePath, candidate);
-				return candidate;
-			}
-		}
-	} catch {
-		// Claude projects dir may not exist
-	}
-
+	// Transcript discovery for opencode platform
+	// Note: Opencode stores transcripts in a different location than legacy Claude Code
+	// The platform abstraction (createPlatform) handles transcript discovery
 	return null;
 }
 

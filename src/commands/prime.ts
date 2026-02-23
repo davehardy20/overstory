@@ -264,7 +264,7 @@ async function outputAgentContext(
 	if (boundSession) {
 		sections.push("\n## Activation");
 		sections.push(`You have a bound task: **${boundSession.beadId}**`);
-		sections.push("Read your overlay at `.claude/CLAUDE.md` and begin working immediately.");
+		sections.push("Read your overlay at `AGENTS.md` and begin working immediately.");
 		sections.push("Do not wait for dispatch mail. Your assignment was bound at spawn time.");
 	}
 

@@ -23,7 +23,7 @@ describe("extractFileScope", () => {
 	});
 
 	it("should return empty array when 'No file scope restrictions'", async () => {
-		const overlayPath = join(tempDir, ".claude", "CLAUDE.md");
+		const overlayPath = join(tempDir, "AGENTS.md");
 		const content = `# Agent Overlay
 
 ## File Scope (exclusive ownership)
@@ -40,7 +40,7 @@ Some expertise here.
 	});
 
 	it("should extract file paths from valid overlay", async () => {
-		const overlayPath = join(tempDir, ".claude", "CLAUDE.md");
+		const overlayPath = join(tempDir, "AGENTS.md");
 		const content = `# Agent Overlay
 
 ## File Scope (exclusive ownership)

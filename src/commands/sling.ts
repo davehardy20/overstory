@@ -9,11 +9,11 @@
  * 5. Check name uniqueness + concurrency limit
  * 6. Validate bead exists
  * 7. Create worktree
- * 8. Generate + write overlay CLAUDE.md
+ * 8. Generate + write overlay AGENTS.md
  * 9. Deploy hooks config
  * 10. Claim beads issue
  * 11. Create agent identity
- * 12. Create tmux session running claude
+ * 12. Create tmux session running opencode
  * 13. Record session in SessionStore + increment run agent count
  * 14. Return AgentSession
  */
@@ -132,7 +132,7 @@ export interface BeaconOptions {
  *   [OVERSTORY] <agent-name> (<capability>) <ISO timestamp> task:<bead-id>
  *   Depth: <n> | Parent: <parent-name|none>
  *   Startup protocol:
- *   1. Read your assignment in .claude/CLAUDE.md
+ *   1. Read your assignment in AGENTS.md
  *   2. Load expertise: mulch prime
  *   3. Check mail: overstory mail check --agent <name>
  *   4. Begin working on task <bead-id>
@@ -143,7 +143,7 @@ export function buildBeacon(opts: BeaconOptions): string {
 	const parts = [
 		`[OVERSTORY] ${opts.agentName} (${opts.capability}) ${timestamp} task:${opts.taskId}`,
 		`Depth: ${opts.depth} | Parent: ${parent}`,
-		`Startup: read .claude/CLAUDE.md, run mulch prime, check mail (overstory mail check --agent ${opts.agentName}), then begin task ${opts.taskId}`,
+		`Startup: read AGENTS.md, run mulch prime, check mail (overstory mail check --agent ${opts.agentName}), then begin task ${opts.taskId}`,
 	];
 	return parts.join(" — ");
 }
@@ -479,7 +479,7 @@ export async function slingCommand(args: string[]): Promise<void> {
 			beadId: taskId,
 		});
 
-		// 8. Generate + write overlay CLAUDE.md
+		// 8. Generate + write overlay AGENTS.md
 		const agentDefPath = join(config.project.root, config.agents.baseDir, agentDef.file);
 		const baseDefinition = await Bun.file(agentDefPath).text();
 

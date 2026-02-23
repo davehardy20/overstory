@@ -469,31 +469,22 @@ export function getCapabilityGuards(capability: string): HookEntry[] {
  * Get the platform-specific context directory and settings file name.
  *
  * @param worktreePath - Absolute path to the agent's git worktree
- * @param platformType - The platform type (claude or opencode)
  * @returns Object with contextDir and settingsFileName
  */
-function getPlatformPaths(
-	worktreePath: string,
-	platformType: string,
-): { contextDir: string; settingsFileName: string } {
-	if (platformType === "opencode") {
-		return {
-			contextDir: join(worktreePath, ".opencode"),
-			settingsFileName: "settings.json",
-		};
-	}
-	// Default to Claude Code paths
+function getPlatformPaths(worktreePath: string): {
+	contextDir: string;
+	settingsFileName: string;
+} {
 	return {
-		contextDir: join(worktreePath, ".claude"),
-		settingsFileName: "settings.local.json",
+		contextDir: join(worktreePath, ".opencode"),
+		settingsFileName: "settings.json",
 	};
 }
 
 /**
  * Deploy hooks config to an agent's worktree.
  *
- * Platform-aware: Writes to `.claude/settings.local.json` for Claude Code
- * or `.opencode/settings.json` for Opencode.
+ * Writes to `.opencode/settings.json` for Opencode.
  *
  * Reads `templates/hooks.json.tmpl`, replaces `{{AGENT_NAME}}`, then merges
  * capability-specific PreToolUse guards into the resulting config.
@@ -501,14 +492,12 @@ function getPlatformPaths(
  * @param worktreePath - Absolute path to the agent's git worktree
  * @param agentName - The unique name of the agent
  * @param capability - Agent capability (builder, scout, reviewer, lead, merger)
- * @param platformType - Optional platform type override (auto-detects if not provided)
  * @throws {AgentError} If the template is not found or the write fails
  */
 export async function deployHooks(
 	worktreePath: string,
 	agentName: string,
 	capability = "builder",
-	platformType?: string,
 ): Promise<void> {
 	let template: string;
 	try {
@@ -540,9 +529,7 @@ export async function deployHooks(
 
 	const finalContent = `${JSON.stringify(config, null, "\t")}\n`;
 
-	// Default to opencode for this port (ignore Claude Code even if installed)
-	const resolvedPlatform = platformType ?? "opencode";
-	const { contextDir, settingsFileName } = getPlatformPaths(worktreePath, resolvedPlatform);
+	const { contextDir, settingsFileName } = getPlatformPaths(worktreePath);
 	const outputPath = join(contextDir, settingsFileName);
 
 	try {

@@ -9,7 +9,7 @@
  * Unlike regular agents spawned by sling, the monitor:
  * - Has no worktree (operates on the main working tree)
  * - Has no bead assignment (it monitors, not implements)
- * - Has no overlay CLAUDE.md (context comes via overstory status + mail)
+ * - Has no overlay AGENTS.md (context comes via overstory status + mail)
  * - Persists across patrol cycles
  */
 
@@ -78,7 +78,7 @@ async function startMonitor(args: string[]): Promise<void> {
 
 	if (isRunningAsRoot()) {
 		throw new AgentError(
-			"Cannot spawn agents as root (UID 0). The claude CLI rejects --dangerously-skip-permissions when run as root, causing the tmux session to die immediately. Run overstory as a non-root user.",
+			"Cannot spawn agents as root (UID 0). The opencode CLI may reject operations when run as root, causing the tmux session to die immediately. Run overstory as a non-root user.",
 		);
 	}
 
@@ -119,7 +119,7 @@ async function startMonitor(args: string[]): Promise<void> {
 			store.updateState(MONITOR_NAME, "completed");
 		}
 
-		// Deploy monitor-specific hooks to the project root's .claude/ directory.
+		// Deploy monitor-specific hooks to the project root's .opencode/ directory.
 		// The monitor gets the same structural enforcement as other non-implementation
 		// agents (Write/Edit/NotebookEdit blocked, dangerous bash commands blocked).
 		await deployHooks(projectRoot, MONITOR_NAME, "monitor");

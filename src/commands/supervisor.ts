@@ -133,7 +133,7 @@ async function startSupervisor(args: string[]): Promise<void> {
 
 	if (isRunningAsRoot()) {
 		throw new AgentError(
-			"Cannot spawn agents as root (UID 0). The claude CLI rejects --dangerously-skip-permissions when run as root, causing the tmux session to die immediately. Run overstory as a non-root user.",
+			"Cannot spawn agents as root (UID 0). The opencode CLI may reject operations when run as root, causing the tmux session to die immediately. Run overstory as a non-root user.",
 		);
 	}
 
@@ -177,7 +177,7 @@ async function startSupervisor(args: string[]): Promise<void> {
 			store.updateState(flags.name, "completed");
 		}
 
-		// Deploy supervisor-specific hooks to the project root's .claude/ directory.
+		// Deploy supervisor-specific hooks to the project root's .opencode/ directory.
 		await deployHooks(projectRoot, flags.name, "supervisor");
 
 		// Create supervisor identity if first run
