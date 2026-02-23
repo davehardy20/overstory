@@ -62,6 +62,7 @@ describe("E2E: Platform Integration Workflows", () => {
 			const available = await detectAvailablePlatforms();
 
 			expect(available).toBeDefined();
+			// Both platforms should be in the results (they're always checked)
 			expect(available.has("claude")).toBe(true);
 			expect(available.has("opencode")).toBe(true);
 
@@ -323,6 +324,13 @@ describe("E2E: Platform Integration Workflows", () => {
 		});
 
 		test("context files have different names per platform", async () => {
+			const claudeAvailable = await isCommandAvailable("claude");
+			const opencodeAvailable = await isCommandAvailable("opencode");
+			if (!claudeAvailable || !opencodeAvailable) {
+				// Skip test if either platform not available
+				return;
+			}
+
 			await withSuppressedStdout(async () => {
 				await initCommand([]);
 			});
@@ -335,6 +343,13 @@ describe("E2E: Platform Integration Workflows", () => {
 		});
 
 		test("context directories are platform-specific", async () => {
+			const claudeAvailable = await isCommandAvailable("claude");
+			const opencodeAvailable = await isCommandAvailable("opencode");
+			if (!claudeAvailable || !opencodeAvailable) {
+				// Skip test if either platform not available
+				return;
+			}
+
 			await withSuppressedStdout(async () => {
 				await initCommand([]);
 			});
@@ -401,6 +416,12 @@ describe("E2E: Platform Integration Workflows", () => {
 		});
 
 		test("Opencode context includes AGENTS-specific sections", async () => {
+			const opencodeAvailable = await isCommandAvailable("opencode");
+			if (!opencodeAvailable) {
+				// Skip test if opencode not available
+				return;
+			}
+
 			await withSuppressedStdout(async () => {
 				await initCommand([]);
 			});
