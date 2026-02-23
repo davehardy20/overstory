@@ -531,6 +531,70 @@ describe("synthetic session-end events", () => {
 		expect(sessionEndEvents).toHaveLength(1);
 	});
 
+	test("--worktrees clears sessions.db so dashboard doesn't show stale agents", async () => {
+		// Create sessions.db with an agent session
+		const { store } = openSessionStore(overstoryDir);
+		store.upsert({
+			id: "session-wt",
+			agentName: "wt-agent",
+			capability: "scout",
+			state: "working",
+			startedAt: new Date().toISOString(),
+			lastActivity: new Date().toISOString(),
+			tmuxSession: "overstory-test-wt-agent",
+			beadId: "beads-123",
+			worktreePath: "/tmp/wt",
+			branchName: "overstory/test-wt",
+			pid: null,
+			parentAgent: null,
+			depth: 0,
+			runId: null,
+			escalationLevel: 0,
+			stalledSince: null,
+		});
+		store.close();
+
+		await cleanCommand(["--worktrees"]);
+
+		// sessions.db should be wiped
+		const { store: store2 } = openSessionStore(overstoryDir);
+		const sessions = store2.getAll();
+		store2.close();
+		expect(sessions).toHaveLength(0);
+	});
+
+	test("--agents clears sessions.db so dashboard doesn't show stale agents", async () => {
+		// Create sessions.db with an agent session
+		const { store } = openSessionStore(overstoryDir);
+		store.upsert({
+			id: "session-ag",
+			agentName: "ag-agent",
+			capability: "builder",
+			state: "completed",
+			startedAt: new Date().toISOString(),
+			lastActivity: new Date().toISOString(),
+			tmuxSession: "overstory-test-ag-agent",
+			beadId: "beads-456",
+			worktreePath: "/tmp/ag",
+			branchName: "overstory/test-ag",
+			pid: null,
+			parentAgent: null,
+			depth: 0,
+			runId: null,
+			escalationLevel: 0,
+			stalledSince: null,
+		});
+		store.close();
+
+		await cleanCommand(["--agents"]);
+
+		// sessions.db should be wiped
+		const { store: store2 } = openSessionStore(overstoryDir);
+		const sessions = store2.getAll();
+		store2.close();
+		expect(sessions).toHaveLength(0);
+	});
+
 	test("includes runId and sessionId from agent session", async () => {
 		const sessionsPath = join(overstoryDir, "sessions.json");
 		const sessions = [

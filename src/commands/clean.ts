@@ -394,9 +394,9 @@ Flags:
   --sessions      Wipe sessions.db
   --metrics       Delete metrics.db
   --logs          Remove all agent logs
-  --worktrees     Remove all worktrees + kill tmux sessions
+  --worktrees     Remove all worktrees + kill tmux sessions + clear sessions.db
   --branches      Delete all overstory/* branch refs
-  --agents        Remove agent identity files
+  --agents        Remove agent identity files + clear sessions.db
   --specs         Remove task spec files
 
 Options:
@@ -509,7 +509,8 @@ export async function cleanCommand(args: string[]): Promise<void> {
 	}
 
 	// 6. Wipe sessions.db + legacy sessions.json
-	if (doSessions) {
+	// Note: --agents and --worktrees also clear sessions since those agents are gone
+	if (doSessions || doAgents || doWorktrees) {
 		result.sessionsCleared = await wipeSqliteDb(join(overstoryDir, "sessions.db"));
 		// Also clean legacy sessions.json if it still exists
 		await resetJsonFile(join(overstoryDir, "sessions.json"));
